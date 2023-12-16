@@ -54,11 +54,12 @@ OTHERS=$( ps x | grep sqlite3 |wc -l )
 [ -n "${OTHERS}" ] && sleep 0.0$OTHERS
 ###### B1D) If no SID, yet using bash (checks $SHELL), define a new SID
 # a new SID is obtained: insert, select max (strictly increasing) then export
-# This causes SID to be is maintained when opening subshells
-# WARNING: shouldn't use -init "${SQLITE_BASH_INIT}" to avoid headers and spaces
+# This should maintain a SID when opening subshells: can debug that with:
+#echo "setting SID with $0 using ${0/\/usr\/bin\//}" \
 [ -z "${SID}" ] \
- && [ -z "${0//\/[a-z]*bash/}" ] \
+ && [ "${0/\/usr\/bin\//}" == "bash" ] \
  && export SID=$( <. sqlite3 "${SQLITE_BASH_HISTORY}" "
+-- WARNING: sqlite3 should NOT use -init SQLITE_BASH_INIT to avoid headers
 BEGIN TRANSACTION;
  CREATE TABLE IF NOT EXISTS sessions (   -- table of sessions, pk unique for host+time
   sid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -86,8 +87,9 @@ BEGIN TRANSACTION;
   );
  SELECT max(sid) from sessions;
 COMMIT;
--- then select the returned number
+-- then select the returned number in case the header was left on
 " | grep "^[0-9][0-9]*")
+
 
 ##### B2) Feature: multiplexing, to have a few different bash always visible
 # Logic based on $SSH_CONNECTION (exported by openssh-server and dropbear)

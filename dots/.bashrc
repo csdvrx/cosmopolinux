@@ -24,7 +24,7 @@ export BASHRC=$( realpath ${BASH_SOURCE} || echo "${BASH_SOURCE}" || echo "unkno
 # - hasn't read the file before
 # - the file exist
 # Can make itself actual #3 by load .bash_profile as a practical #2
-# .bash_profile then profides $SQLITE_BASH_INIT ($SID, $MID) used by sqlite
+# .bash_profile then provides $SQLITE_BASH_INIT, $SID, $MID used by sqlite
 [ -z "${BASHPROFILE}" ] \
  && [ -f "${HOME}/.bash_profile" ] \
  && source ${HOME}/.bash_profile
@@ -106,17 +106,22 @@ trap sqliteaddstart DEBUG
 ##### B5B) Once done executing, complete with the error code and stop timestamp
 # This must be done in a different way: through PROMPT_COMMAND
 function sqliteaddstop {
- local ERR=$1
- [[ -z $ERR ]] && ERR=0
- # get the command from history then strip the command number
- local numandwhat="$(history 1)"
- # remove leading spaces
+ # need the sequential number, either to bail out or update sqlite log
+ # - get the command from history then strip the command number
+ local numandwhat="$(history 0)"
+ # - remove leading spaces
  numandwhat="${numandwhat#"${numandwhat%%[![:space:]]*}"}"
- # read the sequence number
+ # - read the sequence number
  local num="${numandwhat%%' '*}"
- # don't do anything right after login
- [[ $num <1 ]] && return
- sqlite3 "$SQLITE_BASH_INIT" "
+ # - bail out if -1 ie right after login
+ [[ $num <0 ]] && return
+ # in any other case, get the error code as arg1
+ local ERR=$0
+ # recode to zero when null: wasteful, but helps writing simpler sql queries
+ [[ -z "${ERR}" ]] && ERR=-1
+ # can now update to get the stop time and error code
+ [[ -z "${SID}" ]] && echo "missing SID" || \
+ sqlite2 "$SQLITE_BASH_HISTORY" "
    UPDATE commands 
     SET err='${ERR//\'/''}', stop=current_timestamp
     WHERE seq =${num//\'/''} AND ssid =${SID//\'/''}
@@ -298,7 +303,7 @@ type -p exa >/dev/null \
 # step 1D: \e[2m : toggle dim
 # step 1E: \e[31m : set red as the foreground color
 # step 1F: \] : say to bash prompt length starts
-# step 1G: #!%03d: print #! then in 3 decimals the return value if >0==error
+# step 1G: \$!%03d: print #! if uid 0 or $! and the return value if >0==error
 # step 1H: \[ : say to bash this does not matter for prompt length (linebreak)
 # step 1I: \e[39m: reset the foreground color to default
 # step 1J: \e[49m: reset the foreground color to default
@@ -316,7 +321,7 @@ type -p exa >/dev/null \
 # step 2I: \e[0m : reset the style to normal
 # step 2J: \e[23m: reset the italic toggle
 # step 2K: \] : say to bash prompt length starts here (for linebreaks/scroll)
-# step 2L: (\#:: print an opening parenthesis then the userid and a colon
+# step 2L: (\#: print an opening parenthesis, the command sequence id and a colon
 # step 2M: \[\e[1m\]: toggle bold which doesn't matter for prompt length
 # step 2N: \w), print the working directory and a closing parenthesis
 # step 2O: \[\e[24m\]\n :reset the underline toggle
@@ -325,11 +330,12 @@ type -p exa >/dev/null \
 # step 3A: \[ : say to bash this does not matter for prompt length
 # step 3B: \e[0m\e[3m\e[2m: reset the style to normal, toggle dim and italic
 # step 3C: \] : say to bash prompt length starts
-# step 3D: #: print a hash sign (same font as before thanks to style/dim/ital)
+# step 3D: \$: print a dollar or hash sign (same font as before thanks to style/dim/ital)
 # # \e[30m\e[41m : print in color (here black fg, red bg)
 # step 3E: \[\e[0m\]: reset style to normal, doesn't matter for linebreaks
 # step 4:  : a space to separate the leading hash sign from your entry
-PS1='`RETURN=$? ; [ ${RETURN} != 0 ] \
+# WARNING: must not forget sqliteaddstop "$RETURN" 2>/dev/null to update stop+errcode
+PS1='`RETURN=$? ; sqliteaddstop "$RETURN" ; [ ${RETURN} != 0 ] \
  && printf "\[\e[4m\e[3m\e[2m\e[31m\]\$!%03d\[\e[39m\e[49m\]" $RETURN \
  || printf "\[\e[3m\e[2m\e[39m\]\$    \[\e[49m\]"` \
 \[\e[39m\][\D{%Y-%m-%d.%H:%M:%S}]\[\e[24m\] \[\e[0m\e[23m\e[39m\](\#:\[\e[1m\]\w)\n\
