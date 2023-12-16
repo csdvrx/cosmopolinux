@@ -1,0 +1,58 @@
+--- a/drivers/gpu/drm/i915/display/intel_modeset_setup.c	2023-04-02 00:04:22.129976719 +0200
++++ b/drivers/gpu/drm/i915/display/intel_modeset_setup.c	2023-04-02 00:23:53.249972251 +0200
+@@ -108,6 +108,7 @@
+ 
+ 	bw_state->data_rate[pipe] = 0;
+ 	bw_state->num_active_planes[pipe] = 0;
++	bw_state->min_cdclk[pipe] = 0;
+ }
+ 
+ static void intel_modeset_update_connector_atomic_state(struct drm_i915_private *i915)
+@@ -434,6 +435,8 @@
+ 		to_intel_cdclk_state(i915->display.cdclk.obj.state);
+ 	struct intel_dbuf_state *dbuf_state =
+ 		to_intel_dbuf_state(i915->display.dbuf.obj.state);
++	struct intel_bw_state *bw_state =
++		to_intel_bw_state(i915->display.bw.obj.state);
+ 	enum pipe pipe;
+ 	struct intel_crtc *crtc;
+ 	struct intel_encoder *encoder;
+@@ -550,8 +553,8 @@
+ 	drm_connector_list_iter_end(&conn_iter);
+ 
+ 	for_each_intel_crtc(&i915->drm, crtc) {
+-		struct intel_bw_state *bw_state =
+-			to_intel_bw_state(i915->display.bw.obj.state);
++//		struct intel_bw_state *bw_state =
++//			to_intel_bw_state(i915->display.bw.obj.state);
+ 		struct intel_crtc_state *crtc_state =
+ 			to_intel_crtc_state(crtc->base.state);
+ 		struct intel_plane *plane;
+@@ -615,6 +618,7 @@
+ 
+ 		intel_bw_crtc_update(bw_state, crtc_state);
+ 	}
++	cdclk_state->bw_min_cdclk = intel_bw_min_cdclk(i915, bw_state);
+ }
+ 
+ static void
+--- a/drivers/gpu/drm/i915/display/intel_bw.c	2023-02-20 00:31:50.000000000 +0100
++++ b/drivers/gpu/drm/i915/display/intel_bw.c	2023-04-01 23:52:15.379979491 +0200
+@@ -698,11 +698,14 @@
+ 		intel_bw_crtc_data_rate(crtc_state);
+ 	bw_state->num_active_planes[crtc->pipe] =
+ 		intel_bw_crtc_num_active_planes(crtc_state);
++	bw_state->min_cdclk[crtc->pipe] =
++		intel_bw_crtc_min_cdclk(crtc_state);
+ 
+-	drm_dbg_kms(&i915->drm, "pipe %c data rate %u num active planes %u\n",
+-		    pipe_name(crtc->pipe),
++	drm_dbg_kms(&i915->drm, "[CRTC:%d:%s] data rate %u num active planes %u min cdclk %d kHz\n",
++		    crtc->base.base.id, crtc->base.name,
+ 		    bw_state->data_rate[crtc->pipe],
+-		    bw_state->num_active_planes[crtc->pipe]);
++		    bw_state->num_active_planes[crtc->pipe],
++		    bw_state->min_cdclk[crtc->pipe]);
+ }
+ 
+ static unsigned int intel_bw_num_active_planes(struct drm_i915_private *dev_priv,

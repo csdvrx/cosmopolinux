@@ -1,0 +1,4 @@
+#!sh
+
+echo >&2 "fatal: git was built without support for $(basename $0) (NO_PYTHON=NoThanks)."
+exit 128

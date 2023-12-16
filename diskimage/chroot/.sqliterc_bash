@@ -1,0 +1,17 @@
+-- silence the "memory" messagde
+.output /dev/null
+PRAGMA journal_mode = MEMORY;
+-- then restore some outputs
+.output stderr
+-- faster insert
+PRAGMA synchronous = OFF;
+-- PRAGMA foreign_keys = ON;
+-- PRAGMA locking_mode = EXCLUSIVE;
+PRAGMA cache_size = -500000;
+
+.header on
+.timer on
+.mode column
+
+-- then restore normal outputs
+.output stdout

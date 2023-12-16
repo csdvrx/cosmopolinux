@@ -1,0 +1,65 @@
+Fix an FPU invalidation bug on exec(), and fix a performance
+regression due to a missing setting of X86_FEATURE_OSXSAVE.
+
+ Thanks,
+
+	Ingo
+
+------------------>
+Feng Tang (1):
+      x86/fpu: Set X86_FEATURE_OSXSAVE feature after enabling OSXSAVE in CR4
+
+Rick Edgecombe (1):
+      x86/fpu: Invalidate FPU state correctly on exec()
+
+
+ arch/x86/kernel/fpu/context.h | 3 +--
+ arch/x86/kernel/fpu/core.c    | 2 +-
+ arch/x86/kernel/fpu/xstate.c  | 7 +++++++
+ 3 files changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/arch/x86/kernel/fpu/context.h b/arch/x86/kernel/fpu/context.h
+index af5cbdd9bd29..f6d856bd50bc 100644
+--- a/arch/x86/kernel/fpu/context.h
++++ b/arch/x86/kernel/fpu/context.h
+@@ -19,8 +19,7 @@
+  * FPU state for a task MUST let the rest of the kernel know that the
+  * FPU registers are no longer valid for this task.
+  *
+- * Either one of these invalidation functions is enough. Invalidate
+- * a resource you control: CPU if using the CPU for something else
++ * Invalidate a resource you control: CPU if using the CPU for something else
+  * (with preemption disabled), FPU for the current task, or a task that
+  * is prevented from running by the current task.
+  */
+diff --git a/arch/x86/kernel/fpu/core.c b/arch/x86/kernel/fpu/core.c
+index 1015af1ae562..98e507cc7d34 100644
+--- a/arch/x86/kernel/fpu/core.c
++++ b/arch/x86/kernel/fpu/core.c
+@@ -679,7 +679,7 @@ static void fpu_reset_fpregs(void)
+ 	struct fpu *fpu = &current->thread.fpu;
+ 
+ 	fpregs_lock();
+-	fpu__drop(fpu);
++	__fpu_invalidate_fpregs_state(fpu);
+ 	/*
+ 	 * This does not change the actual hardware registers. It just
+ 	 * resets the memory image and sets TIF_NEED_FPU_LOAD so a
+diff --git a/arch/x86/kernel/fpu/xstate.c b/arch/x86/kernel/fpu/xstate.c
+index 0bab497c9436..1afbc4866b10 100644
+--- a/arch/x86/kernel/fpu/xstate.c
++++ b/arch/x86/kernel/fpu/xstate.c
+@@ -882,6 +882,13 @@ void __init fpu__init_system_xstate(unsigned int legacy_size)
+ 		goto out_disable;
+ 	}
+ 
++	/*
++	 * CPU capabilities initialization runs before FPU init. So
++	 * X86_FEATURE_OSXSAVE is not set. Now that XSAVE is completely
++	 * functional, set the feature bit so depending code works.
++	 */
++	setup_force_cpu_cap(X86_FEATURE_OSXSAVE);
++
+ 	print_xstate_offset_size();
+ 	pr_info("x86/fpu: Enabled xstate features 0x%llx, context size is %d bytes, using '%s' format.\n",
+ 		fpu_kernel_cfg.max_features,
