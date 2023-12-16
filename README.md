@@ -7,7 +7,7 @@ The full boot sequence can be seen in this asciinema recording of the qemu conso
 ![console recoding when booting to bash in half a second](recordings/qemu-console.gif)
 
 When recording qemu GTK output with OBS studio, it takes a little longer to get bash, but Cosmopolinux still gets you there in less than half a second:
-![qemu gtk booting to bash in half a second](recordings/qemu-gtk.mp4)
+![qemu gtk booting to bash in half a second](recordings/qemu-gtk.gif)
 
 If Cosmopolinux looks like a quaint minimalistic retrocomputing Linux CLI, ["mission accomplished"](https://en.wikipedia.org/wiki/Mission_Accomplished): it's my 2023 Christmas project, to show it's possible to [☪☮e✡i$✝ peacefully with other OSes](https://en.wikipedia.org/wiki/Coexist) and move beyond the sterile "religious" flamewars about Windows and Linux (I love them both!)
 
