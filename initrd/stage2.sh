@@ -111,7 +111,7 @@ $BBPATH/echo "[5b] special case for qemu interfaces $QEMU_IFACE_NAT $QEMU_IFACE_
  || $BBPATH/echo "$QEMU_IFACE_NAT network configuration: failed"
 
 # - assume the second interface sits on a private LAN to qemu, provide a fixed IP and start a DHCP server
-[ -n $QEMU_IFACE_TAP ] \
+[ -n "$QEMU_IFACE_TAP" ] \
  && $BBPATH/echo "[5f] assuming last $QEMU_IFACE_TAP is from qemu given ^52:54 in the mac address" > $TOKMSG \
  && $BBPATH/ifconfig -a | grep "^$QEMU_IFACE_TAP\s*Link" \
  && $BBPATH/echo "[5g] using fixed IP to speedup boot" > $TOKMSG \
