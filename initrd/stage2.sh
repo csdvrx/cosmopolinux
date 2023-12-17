@@ -321,7 +321,7 @@ FROM_STAGE=2
  && $BBPATH/echo "[9e] got $APE in /switchroot" > $TOKMSG \
  && $BBPATH/echo $$ | $BBPATH/grep -q "^1$" \
  && $BBPATH/echo "[9f] got PID 1" > $TOKMSG \
- && exec $BBPATH/chroot /switchroot $APE /usr/bin/bash /$NEXT $FROM_STAGE $TO_STAGE \
+ && exec $BBPATH/chroot /switchroot $APE /usr/bin/bash /$NEXT $FROM_STAGE $TO_STAGE < /dev/console \
  || $BBPATH/echo "[9e] ERROR: failed the exec chroot to switchroot folders, starting stage 2 debug" > $TOKMSG
 
 # This demonstrates how to give PID 1 to cosmopolitan bash and shows:

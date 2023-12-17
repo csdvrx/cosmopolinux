@@ -19,7 +19,10 @@ TOKMSG=./chroot/dev/kmsg
 #  - uses busybox for now as booting a kernel without will need some minimal features
 #   - even if assuming away insmod (as modules can be static in the kernel)
 #   - need to mount the filesystems (only exceptions: devtmpfs and rootfs, see below)
-#   - must switch_root (utils/run_init.c in klibc) or pivot_root or chroot or at least exec within a script
+#   - must switch_root (utils/run_init.c in klibc) or pivot_root or chroot or at least exec within a script:
+#    switch_root move the root and delete the old root directory: saves memory
+#    pivot_root keeps the old root accessible under a new location
+#    chroot lets you do anything you want by hand: chosen approach, passing the PID with exec
 
 ## Example with everything inside a single folder: requires care
 # In qemu, try first with a display not a console (either serial or stdio) in case of kmsg issues
@@ -67,6 +70,7 @@ $BBPATH/echo "[2] /chroot prepared on $MACHINE with APE loaders present: $APES" 
 # may not sent initial messages to /dev/kmsg until the /dev used is mounted rw
 # (with noinitrd and a ro rootfs, the /dev can be ro if rootfs is read-only too)
 
+# Accessible from the console qemu is run on 
 CONSOLE="hvc0"
 STTYPARAMS="sane"
 # can't use stty to set anything except "sane" on hvc0
@@ -75,12 +79,14 @@ $BBPATH/echo "[3a] trying $CONSOLE $STTYPARAMS" > $TOKMSG
 # TODO: ash -s $CONSOLE could make it easier to find and kill it later, but may becomes blocking
 $BBPATH/ash -c "$BBPATH/chroot ./chroot /busybox/ash -c \"[ -c /dev/$CONSOLE ] && /busybox/echo $CONSOLE available > /dev/kmsg && /busybox/stty -F /dev/$CONSOLE $STTYPARAMS && < /dev/$CONSOLE > /dev/$CONSOLE 2>&1 PATH=$PATH:/busybox /busybox/ash && /busybox/echo closed console $CONSOLE will not respawn > /dev/kmsg &\" -s $CONSOLE" && HVC0=/dev/hvc0
 
+# Accessible from /dev/pts/X
 CONSOLE="ttyS0"
 ## safe default given earlyprintk on ttyS0 and https://wiki.qemu.org/Features/ChardevFlowControl
 STTYPARAMS="sane ispeed 38400 ospeed 38400"
 $BBPATH/echo "[3b] trying $CONSOLE $STTYPARAMS" > $TOKMSG
 $BBPATH/ash -c "$BBPATH/chroot ./chroot /busybox/ash -c \"[ -c /dev/$CONSOLE ] && /busybox/echo $CONSOLE available > /dev/kmsg && /busybox/stty -F /dev/$CONSOLE $STTYPARAMS && < /dev/$CONSOLE > /dev/$CONSOLE 2>&1 PATH=$PATH:/busybox /busybox/ash && /busybox/echo closed console $CONSOLE will not respawn > /dev/kmsg &\" -s $CONSOLE" && TTYS0=/dev/ttyS0
 
+# Accessible from telnet localhost 7000
 CONSOLE="ttyS1"
 STTYPARAMS="sane ispeed 115200 ospeed 115200"
 $BBPATH/echo "[3c] trying $CONSOLE $STTYPARAMS" > $TOKMSG
@@ -98,13 +104,16 @@ $BBPATH/mount -o bind / ./chroot/initrd
 # At this point, rdinit passes the puck to stage 2 in /chroot/
 # if there's no stage 2 file, starts a shell: bash is preferred
 # This is only for simplicity: could also use ./chroot/initrd/stage2.sh
+# WARNING: don't forget to pass the standard input:
+#exec (...) '< ./chroot/dev/console'
+# Otherwise, tty will say 'not a console'
 CURRENT_STAGE=1
 NEXT_STAGE=2
 [ -f ./stage2.sh ] \
  && $BBPATH/cp ./stage2.sh ./chroot \
  && $BBPATH/echo "[4a] preparing stage 2 inside /chroot" > $TOKMSG \
  && $BBPATH/stat -c "%y %s %n" ./chroot/stage2.sh > $TOKMSG \
- && exec $BBPATH/chroot ./chroot /stage2.sh $CURRENT_STAGE $NEXT_STAGE \
+ && exec $BBPATH/chroot ./chroot /stage2.sh $CURRENT_STAGE $NEXT_STAGE < ./chroot/dev/console \
  || $BBPATH/echo "[4] no stage 2 due to missing ./chroot/stage2.sh, trying $APE for bash if present, defaulting to ash" > $TOKMSG \
  && [ -f /usr/bin/ape-$MACHINE.elf ] \
  && [ -f ./chroot/usr/bin/bash ] \
