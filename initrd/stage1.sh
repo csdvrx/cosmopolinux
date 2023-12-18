@@ -65,7 +65,7 @@ APES=$( $BBPATH/ls ./chroot/.ape* ./chroot/usr/bin/ape-* 2>./chroot/dev/null |$B
 echo "[2a] APE loaders found: $APES" > $TOKMSG
 MACHINE=$( ./chroot/busybox/uname -m )
 # Select the best (newest) APE loader but stage 2 may chose better from /usr
-APE=$( $BBPATH/ls /.ape-* 2> /dev/null | $BBPATH/sort -nr | $BBPATH/head -n 1 )
+APE=$( $BBPATH/ls /.ape-* 2> ./chroot/dev/null | $BBPATH/sort -nr | $BBPATH/head -n 1 )
 # Or hardcode a version
 #APE=/.ape-1.9
 echo "[2b] for machine $MACHINE selected APE loader $APE" > $TOKMSG
@@ -87,35 +87,49 @@ echo "[2] /chroot for cosmo binaries should now be prepared" > $TOKMSG
 
 ##### Step 2: prepare a few consoles to monitor stage 2+
 # WARNING: busybox subshells have their standard input redirected from /dev/null
-# not ./dev/null, so in stage 1, can't easily fork (background with &) until /dev ready
-# also can't open spawn console getties with a full path device as they hardcode a /dev prefix
-# For consoles, must chroot to fork and background with job control like
+# cf https://unix.stackexchange.com/questions/719741/why-is-dev-null-needed-to-run-asynchronous-jobs-in-busybox-sh
+# so in stage 1, can't easily fork (background with &) until /dev ready
+# must chroot to fork and background with job control like
 #$BBPATH/ash -c "$BBPATH/chroot ./chroot /busybox/ash -c \"/busybox/sleep 600 & \""
-# FIXME: this starts 2 ash, try to do with just one
+# also can't open spawn console getties with a full path device as they hardcode a /dev prefix
 
 # Accessible from the console qemu is run on 
 CONSOLE="hvc0"
-STTYPARAMS="sane"
+CONSOLES="$CONSOLE"
 # WARNING: can't use stty to set anything except "sane" on hvc0
 # but should be very safe given the buffer max-bytes 262144 + reports virtio-serial can go up to 1.5Gbps
-echo "[3a] trying $CONSOLE $STTYPARAMS" > $TOKMSG
-# TODO: ash -s $CONSOLE could make it easier to find and kill it later, but may becomes blocking
-$BBPATH/ash -c "$BBPATH/chroot ./chroot /busybox/ash -c \"[ -c /dev/$CONSOLE ] && /busybox/echo $CONSOLE available > /dev/kmsg && /busybox/stty -F /dev/$CONSOLE $STTYPARAMS && < /dev/$CONSOLE > /dev/$CONSOLE 2>&1 PATH=$PATH:/busybox /busybox/ash && /busybox/echo closed console $CONSOLE will not respawn > /dev/kmsg &\" -s $CONSOLE" && HVC0=/dev/hvc0
+STTYPARAMS="sane"
+[ -c ./chroot/dev/$CONSOLE ] \
+ && ./chroot/busybox/stty -F ./chroot/dev/$CONSOLE $STTYPARAMS \
+ || echo "[3a] stty $CONSOLE $STTYPARAMS problem" > $TOKMSG \
+ && echo "[3a] opening $CONSOLE" > $TOKMSG \
+ && $BBPATH/chroot ./chroot /busybox/ash -c "PATH=/busybox /busybox/ash < /dev/$CONSOLE > /dev/$CONSOLE 2>&1 &" \
+ && echo "[3a1] closed console $CONSOLE will not respawn" > $TOKMSG
 
 # Accessible from /dev/pts/X
 CONSOLE="ttyS0"
+CONSOLES="$CONSOLES,$CONSOLE"
 ## safe default given earlyprintk on ttyS0 and https://wiki.qemu.org/Features/ChardevFlowControl
 STTYPARAMS="sane ispeed 38400 ospeed 38400"
-echo "[3b] trying $CONSOLE $STTYPARAMS" > $TOKMSG
-$BBPATH/ash -c "$BBPATH/chroot ./chroot /busybox/ash -c \"[ -c /dev/$CONSOLE ] && /busybox/echo $CONSOLE available > /dev/kmsg && /busybox/stty -F /dev/$CONSOLE $STTYPARAMS && < /dev/$CONSOLE > /dev/$CONSOLE 2>&1 PATH=$PATH:/busybox /busybox/ash && /busybox/echo closed console $CONSOLE will not respawn > /dev/kmsg &\" -s $CONSOLE" && TTYS0=/dev/ttyS0
+[ -c ./chroot/dev/$CONSOLE ] \
+ && ./chroot/busybox/stty -F ./chroot/dev/$CONSOLE $STTYPARAMS \
+ || echo "[3b] stty $CONSOLE $STTYPARAMS problem" > $TOKMSG \
+ && echo "[3b] opening $CONSOLE" > $TOKMSG \
+ && $BBPATH/chroot ./chroot /busybox/ash -c "PATH=/busybox /busybox/ash < /dev/$CONSOLE > /dev/$CONSOLE 2>&1 &" \
+ && echo "[3b1] closed console $CONSOLE will not respawn" > $TOKMSG
 
 # Accessible from telnet localhost 7000
 CONSOLE="ttyS1"
+CONSOLES="$CONSOLES,$CONSOLE"
 STTYPARAMS="sane ispeed 115200 ospeed 115200"
-echo "[3c] trying $CONSOLE $STTYPARAMS" > $TOKMSG
-$BBPATH/ash -c "$BBPATH/chroot ./chroot /busybox/ash -c \"[ -c /dev/$CONSOLE ] && /busybox/echo $CONSOLE available > /dev/kmsg && /busybox/stty -F /dev/$CONSOLE $STTYPARAMS && < /dev/$CONSOLE > /dev/$CONSOLE 2>&1 PATH=$PATH:/busybox /busybox/ash && /busybox/echo closed console $CONSOLE will not respawn > /dev/kmsg &\" -s $CONSOLE" && TTYS1=/dev/ttyS1
+[ -c ./chroot/dev/$CONSOLE ] \
+ && ./chroot/busybox/stty -F ./chroot/dev/$CONSOLE $STTYPARAMS \
+ || echo "[3c] stty $CONSOLE $STTYPARAMS problem" > $TOKMSG \
+ && echo "[3c] opening $CONSOLE" > $TOKMSG \
+ && $BBPATH/chroot ./chroot /busybox/ash -c "PATH=/busybox /busybox/ash < /dev/$CONSOLE > /dev/$CONSOLE 2>&1 &" \
+ && echo "[3c1] closed console $CONSOLE will not respawn" > $TOKMSG
 
-echo "[3] consoles should now be ready: $HVC0 $TTYS0 $TTYS1 (no respawn)" > $TOKMSG
+echo "[3] non-respawning consoles $CONSOLES should now be ready" > $TOKMSG
 
 # For debugging and preventing the stage 2 start
 #PATH=$PATH:/$BBPATH exec $BBPATH/ash
