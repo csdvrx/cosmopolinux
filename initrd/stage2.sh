@@ -45,8 +45,6 @@ $BBPATH/echo "[4] stage 2 (initrd chroot) reached $FROM_STAGE" > $TOKMSG
 # could also use something like
 # $BBPATH/ifconfig | $BBPATH/grep ^[a-z0-9]| $BBPATHsed -e 's/ .*//g'
 IFACES=$( $BBPATH/ls /sys/class/net 2> /dev/null | $BBPATH/grep -v "^lo$" | $BBPATH/sort -nr | $BBPATH/tr '\n' ' ' )
-# TODO: consider a for loop iterating on IFACES instead of using sequential assignments
-# could also use new deterministic names depending on the bus
 
 $BBPATH/echo "[5a] configuring network interfaces: $IFACES" > $TOKMSG
 # lo should be automatic, but the others require code
@@ -99,29 +97,29 @@ QEMU_IFACE_TAP=$( $BBPATH/ifconfig -a |$BBPATH/grep -i hwaddr |$BBPATH/grep "add
 # TODO: the ifconfig grep Link is a dirty way to check it's not null
 $BBPATH/echo "[5b] special case for qemu interfaces $QEMU_IFACE_NAT $QEMU_IFACE_TAP" > $TOKMSG
 
-# for qemu only, use ip=10.0.2.15 gw=10.0.0.2
+# for qemu only, use ip=10.0.2.15 gw=10.0.0.2: it's what the pseudo-dhcp server will always give
 [ -n "$QEMU_IFACE_NAT" ] \
  && $BBPATH/echo "[5c] assuming $QEMU_IFACE_NAT is from qemu given ^52:54 in the mac address" > $TOKMSG \
- && $BBPATH/ifconfig -a | grep "^$QEMU_IFACE_NAT\s*Link" \
- && $BBPATH/echo "[5d] given 52:54:0, saving time with the pre-determined IP qemu pseudo dhcp server will give" > $TOKMSG \
+ && $BBPATH/ifconfig -a | grep -q "^$QEMU_IFACE_NAT\s*Link" \
+ && $BBPATH/echo "[5d] given 52:54:0, using deterministic IP and route" > $TOKMSG \
  && $BBPATH/ip link set $QEMU_IFACE_NAT up \
  && $BBPATH/ip addr add 10.0.2.15/24 dev $QEMU_IFACE_NAT \
  && $BBPATH/ip route add default via 10.0.2.2 \
  && $BBPATH/echo "[5e] $QEMU_IFACE_NAT is 10.0.2.15/24, default route via 10.0.2.2" > $TOKMSG \
- || $BBPATH/echo "$QEMU_IFACE_NAT network configuration: failed"
+ || $BBPATH/echo "[5:c-e] $QEMU_IFACE_NAT nat network configuration: failed" > $TOKMSG
 
 # - assume the second interface sits on a private LAN to qemu, provide a fixed IP and start a DHCP server
 [ -n "$QEMU_IFACE_TAP" ] \
  && $BBPATH/echo "[5f] assuming last $QEMU_IFACE_TAP is from qemu given ^52:54 in the mac address" > $TOKMSG \
- && $BBPATH/ifconfig -a | grep "^$QEMU_IFACE_TAP\s*Link" \
+ && $BBPATH/ifconfig -a | grep -q "^$QEMU_IFACE_TAP\s*Link" \
  && $BBPATH/echo "[5g] using fixed IP to speedup boot" > $TOKMSG \
  && $BBPATH/ip link set $QEMU_IFACE_TAP up \
  && $BBPATH/ip addr add 172.20.20.1/16 dev $QEMU_IFACE_TAP \
  && $BBPATH/echo "[5h] $QEMU_IFACE_TAP is 172.20.20.116" \
  && $BBPATH/echo "[5i] adding a DHCP server" > $TOKMSG \
- && $BBPATH/dnsmasq --interface=$QEMU_IFACE_LAST --bind-interfaces --dhcp-range=172.20.20.2,172.20.20.128 \
- && $BBPATH/echo "[5j] $QEMU_IFACE_LAST dhcp server (dnsmasq) provides leases from 172.20.20.2 to 172.20.20.128" \
- || $BBPATH/echo "$QEMU_IFACE_LAST network configuration: failed"
+ && $BBPATH/dnsmasq --interface=$QEMU_IFACE_TAP --bind-interfaces --dhcp-range=172.20.20.2,172.20.20.128 \
+ && $BBPATH/echo "[5j] $QEMU_IFACE_TAP dhcp server (dnsmasq) provides leases from 172.20.20.2 to 172.20.20.128" \
+ || $BBPATH/echo "[5:f-j] $QEMU_IFACE_TAP tap network configuration: failed" > $TOKMSG
 
 OTHER_IFACES=$( $BBPATH/echo $IFACES | $BBPATH/sed -e "s/$QEMU_IFACE_NAT//g" -e "s/$QEMU_IFACE_TAP//g" -e 's/  */ /g' )
 # For other interfaces, fork the DHCP client
@@ -246,7 +244,7 @@ $BBPATH/dmesg | $BBPATH/tail -n1 | $BBPATH/grep "ERROR:" \
 [ -d /rootfs/chroot ] \
  && ROOTFS_DIR="/rootfs/chroot" \
  || ROOTFS_DIR="/rootfs"
-$BBPATH/echo "[7] Using folder $ROOTFS_DIR within the rootfs" > $TOKMSG \
+$BBPATH/echo "[7] using folder $ROOTFS_DIR within the rootfs" > $TOKMSG \
 
 # switch_root or manual equivalents will fail if newroot is not the root of a mount
 # here the ntfs fs is like the initrd: it has a separate ./chroot inside
@@ -259,6 +257,7 @@ $BBPATH/echo "[8a] preparing mount binds of $ROOTFS_DIR to /switchroot" > $TOKMS
  && $BBPATH/mount --bind /dev /switchroot/dev \
  && $BBPATH/mount --bind /dev/pts /switchroot/dev/pts \
  && $BBPATH/mount --bind /proc /switchroot/proc \
+ && $BBPATH/mount --bind /proc/sys/fs/binfmt_misc /switchroot/proc/sys/fs/binfmt_misc \
  && $BBPATH/mount --bind /run /switchroot/run \
  && $BBPATH/mount --bind /tmp /switchroot/tmp \
  && $BBPATH/mount --bind /sys /switchroot/sys \
@@ -278,19 +277,19 @@ $BBPATH/dmesg | $BBPATH/tail -n1 | $BBPATH/grep "ERROR:" \
 
 [ -f /switchroot/stage3.sh ] \
  && [ -x /switchroot/stage3.sh ] \
- && $BBPATH/echo "[8c] Found /switchroot/stage3.sh so considering it" > /$TOKMSG \
- && $BBPATH/echo "[8d] Found /switchroot/stage3.sh executable, using it by default" > /$TOKMSG \
+ && $BBPATH/echo "[8c] found /switchroot/stage3.sh so considering it" > /$TOKMSG \
+ && $BBPATH/echo "[8d] found /switchroot/stage3.sh executable, using it by default" > /$TOKMSG \
  && NEXT="stage3.sh" \
  && TO_STAGE=3
 
 [ -f /switchroot/init ] \
  && [ -x /switchroot/init ] \
- && $BBPATH/echo "[8e] Found /switchroot/init so considering it" > /$TOKMSG \
- && $BBPATH/echo "[8f] Found /switchroot/init executable, overriding previous choice" > /$TOKMSG \
+ && $BBPATH/echo "[8e] found /switchroot/init so considering it" > /$TOKMSG \
+ && $BBPATH/echo "[8f] found /switchroot/init executable, overriding previous choice" > /$TOKMSG \
  && NEXT="init" \
  && TO_STAGE=I
 
-$BBPATH/echo "[8] Going next to $NEXT in /switchroot/$NEXT as stage $TO_STAGE" > /$TOKMSG
+$BBPATH/echo "[8] going next to $NEXT in /switchroot/$NEXT as stage $TO_STAGE" > /$TOKMSG
 
 # Can then attempt switch_root, pivot_root or chroot
 # WARNING: but can't use --move /switchroot here, or will miss the leaf fs on the branch
@@ -309,10 +308,10 @@ MACHINE=$( $BBPATH/uname -m ) \
 # Default to the earliest ape in / if nothing else was found in /usr/bin
 [ -f /switchroot/usr/bin/ape-$MACHINE.elf ] \
  && APE=/switchroot/usr/bin/ape-$MACHINE.elf \
- || APE=$( ls /switchroot/.ape-* 2> /dev/null | $BBPATH/sort -nr | $BBPATH/head -n 1 )
+ || APE=$( $BBPATH/ls /switchroot/.ape-* 2> /dev/null | $BBPATH/sort -nr | $BBPATH/head -n 1 )
 
 # In any case, remove the /switchroot prefix and export the choice for the next stage
-export APE=$( echo $APE | $BBPATH/sed -e 's|^/switchroot||' )
+export APE=$( $BBPATH/echo $APE | $BBPATH/sed -e 's|^/switchroot||' )
 $BBPATH/echo "[9c] selected APE=$APE and exported it, now doing:" > $TOKMSG
 $BBPATH/echo "[9d] exec $BBPATH/chroot /switchroot /usr/bin/ape-$MACHINE.elf /usr/bin/bash /$NEXT" > $TOKMSG
 
