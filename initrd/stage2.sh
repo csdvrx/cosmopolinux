@@ -94,12 +94,13 @@ QEMU_IFACE_NAT=$( $BBPATH/ifconfig -a |$BBPATH/grep -i hwaddr |$BBPATH/grep "add
 # will match qemu-test tap mac addr 52:54:11:(random), the grep -v is just for safety
 QEMU_IFACE_TAP=$( $BBPATH/ifconfig -a |$BBPATH/grep -i hwaddr |$BBPATH/grep "addr 52:54:1" |$BBPATH/sed -e 's/ .*//g' |$BBPATH/tail -n 1 |$BBPATH/grep -v $QEMU_IFACE_NAT)
 
-# TODO: the ifconfig grep Link is a dirty way to check it's not null
 echo "[5b] special case for qemu interfaces $QEMU_IFACE_NAT $QEMU_IFACE_TAP" > $TOKMSG
+# TODO: do better than the ifconfig grep Link (dirty way to check it's here and not null)
 
 # for qemu only, use ip=10.0.2.15 gw=10.0.0.2: it's what the pseudo-dhcp server will always give
-[ -n "$QEMU_IFACE_NAT" ] \
- && echo "[5c] assuming $QEMU_IFACE_NAT is from qemu given ^52:54 in the mac address" > $TOKMSG \
+[ -z "${QEMU_IFACE_NAT}" ] \
+ && echo "[5:c-e] $QEMU_IFACE_NAT nat network interface absent" > $TOKMSG \
+ || echo "[5c] assuming present $QEMU_IFACE_NAT is from qemu given ^52:54 in the mac address" > $TOKMSG \
  && $BBPATH/ifconfig -a | $BBPATH/grep -q "^$QEMU_IFACE_NAT\s*Link" \
  && echo "[5d] given 52:54:0, using deterministic IP and route" > $TOKMSG \
  && $BBPATH/ip link set $QEMU_IFACE_NAT up \
@@ -109,8 +110,9 @@ echo "[5b] special case for qemu interfaces $QEMU_IFACE_NAT $QEMU_IFACE_TAP" > $
  || echo "[5:c-e] $QEMU_IFACE_NAT nat network configuration: failed" > $TOKMSG
 
 # - assume the second interface sits on a private LAN to qemu, provide a fixed IP and start a DHCP server
-[ -n "$QEMU_IFACE_TAP" ] \
- && echo "[5f] assuming last $QEMU_IFACE_TAP is from qemu given ^52:54 in the mac address" > $TOKMSG \
+[ -z "${QEMU_IFACE_TAP}" ] \
+ && echo "[5:f-j] $QEMU_IFACE_TAP tap network interface absent" > $TOKMSG \
+ || echo "[5f] assuming present last $QEMU_IFACE_TAP is from qemu given ^52:54 in the mac address" > $TOKMSG \
  && $BBPATH/ifconfig -a | $BBPATH/grep -q "^$QEMU_IFACE_TAP\s*Link" \
  && echo "[5g] using fixed IP to speedup boot" > $TOKMSG \
  && $BBPATH/ip link set $QEMU_IFACE_TAP up \
@@ -121,15 +123,17 @@ echo "[5b] special case for qemu interfaces $QEMU_IFACE_NAT $QEMU_IFACE_TAP" > $
  && echo "[5j] $QEMU_IFACE_TAP dhcp server (dnsmasq) provides leases from 172.20.20.2 to 172.20.20.128" \
  || echo "[5:f-j] $QEMU_IFACE_TAP tap network configuration: failed" > $TOKMSG
 
-OTHER_IFACES=$( echo $IFACES | $BBPATH/sed -e "s/$QEMU_IFACE_NAT//g" -e "s/$QEMU_IFACE_TAP//g" -e 's/  */ /g' )
-# For other interfaces, fork the DHCP client
+# For other interfaces, will fork the DHCP client
 # TODO: that's the only for loop in these .sh, it would be nice to replace it with xarg
-for IFACE in $OTHER_IFACES; do
- echo "[5k] non-qemu $IFACE: assuming it will respond to DHCP, spawning dhcpc" > $TOKMSG \
- # FIXME: to actually use the reply, udhcpc may need a -s prog handling $1=bound
- $BBPATH/udhcpc -q -f -n -i $IFACE && \
- echo "done with DHCP $IFACE" > $TOKMSG &
-done
+# FIXME: to actually use the reply, udhcpc may need a -s prog handling $1=bound
+OTHER_IFACES=$( echo $IFACES | $BBPATH/sed -e "s/$QEMU_IFACE_NAT//g" -e "s/$QEMU_IFACE_TAP//g" -e 's/  */ /g' )
+[ -n "${OTHER_IFACES}" ] \
+ && for IFACE in $OTHER_IFACES; do
+  echo "[5k1] non-qemu $IFACE: assuming it will respond to DHCP, spawning dhcpc" > $TOKMSG \
+  $BBPATH/udhcpc -q -f -n -i $IFACE && \
+  echo "[5k2] done with DHCP $IFACE" > $TOKMSG &
+ done
+echo "[5k] done with non-eqmu interfaces ($OTHER_IFACES)" > $TOKMSG
 
 # for other qemu like bridges found on WSL1 and WSL2 post 2022, use udhcpc
 # FIXME: it would be nice to be able to make assumptions, but the choice seems non-deterministic
@@ -144,9 +148,8 @@ done
 # && echo "$WSLX_IFACE udhcpc succeeded" > $TOKMSG
 
 ## Just for helping debug for now
-echo "[5l] setting hostname to cosmopolinux.local" > $TOKMSG
-$BBPATH/hostname cosmopolinux.local
-$BBPATH/hostname > $TOKMSG
+$BBPATH/hostname cosmopolinux.local \
+ && echo "[5l] hostname set to cosmopolinux.local" > $TOKMSG
 # but for fun, need a bonjour server to map that IP on 127/8
 
 ## Do some connectivity tests, but fork them to make boot faster
@@ -170,14 +173,14 @@ $BBPATH/sleep 2 \
  || echo "[5n] no reply within 1 second from 10.0.2.3 (qemu nat)" > $TOKMSG \
  &
 
-echo "[5n] in 2 seconds, testing outgoing connectivity to well known 1.1.1.1" > $TOKMSG
+echo "[5n] in 2 seconds, testing outgoing connectivity to 1.1.1.1" > $TOKMSG
 $BBPATH/sleep 2 \
  && $BBPATH/ping -c1 -W2 -w2 -n 1.1.1.1 > $TOKMSG 2>&1 \
  && echo "[5n] got a reply from 1.1.1.1" > $TOKMSG \
  || echo "[5n] no reply within 2 seconds from 1.1.1.1" > $TOKMSG \
  &
 
-echo "[5n] in 2 seconds, testing outgoing connectivity + name resolution to well known google.com" > $TOKMSG
+echo "[5n] in 2 seconds, testing outgoing connectivity + name resolution to google.com" > $TOKMSG
 $BBPATH/sleep 2 \
  && $BBPATH/ping -c1 -W3 -w3 -n google.com > $TOKMSG 2>&1 \
  && echo "[5n] got a reply from google.com" > $TOKMSG \
@@ -231,6 +234,7 @@ echo "[6d] if needs new mount: mount $ROOTFS $PAR_ROOTFSTYPE $PAR_ROOTFLAGS /roo
 # TODO: that's like a dirty way to check for an empty/undefine, but it's more visual
 $BBPATH/mount | $BBPATH/grep "^$ROOTFS_ALREADY_MOUNTED on " > $TOKMSG \
  && $BBPATH/mount -o bind $ROOTFS_ALREADY_MOUNTED /rootfs \
+ && echo "[6] bind mounted root on /rootfs" > $TOKMSG \
  || $BBPATH/mount $ROOTFS $PAR_ROOTFSTYPE $PAR_ROOTFLAGS /rootfs \
  || echo "[6] ERROR: failed to mount root, starting debug" > $TOKMSG
 
