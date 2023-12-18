@@ -34,7 +34,7 @@ TOKMSG=/dev/kmsg
 ## Announce what's happening
 [ -n "$1" ] \
  && FROM_STAGE="from stage $1 going to $2"
-$BBPATH/echo "[4] stage 2 (initrd chroot) reached $FROM_STAGE" > $TOKMSG
+echo "[4] stage 2 (initrd chroot) reached $FROM_STAGE" > $TOKMSG
 
 # TODO: could prep kexec on panic 
 # cf https://lkml.iu.edu/hypermail/linux/kernel/1702.2/01626.html
@@ -46,7 +46,7 @@ $BBPATH/echo "[4] stage 2 (initrd chroot) reached $FROM_STAGE" > $TOKMSG
 # $BBPATH/ifconfig | $BBPATH/grep ^[a-z0-9]| $BBPATHsed -e 's/ .*//g'
 IFACES=$( $BBPATH/ls /sys/class/net 2> /dev/null | $BBPATH/grep -v "^lo$" | $BBPATH/sort -nr | $BBPATH/tr '\n' ' ' )
 
-$BBPATH/echo "[5a] configuring network interfaces: $IFACES" > $TOKMSG
+echo "[5a] configuring network interfaces: $IFACES" > $TOKMSG
 # lo should be automatic, but the others require code
 # Simplish logic:
 # - assume the first interfaces provides NAT using DHCP
@@ -95,40 +95,40 @@ QEMU_IFACE_NAT=$( $BBPATH/ifconfig -a |$BBPATH/grep -i hwaddr |$BBPATH/grep "add
 QEMU_IFACE_TAP=$( $BBPATH/ifconfig -a |$BBPATH/grep -i hwaddr |$BBPATH/grep "addr 52:54:1" |$BBPATH/sed -e 's/ .*//g' |$BBPATH/tail -n 1 |$BBPATH/grep -v $QEMU_IFACE_NAT)
 
 # TODO: the ifconfig grep Link is a dirty way to check it's not null
-$BBPATH/echo "[5b] special case for qemu interfaces $QEMU_IFACE_NAT $QEMU_IFACE_TAP" > $TOKMSG
+echo "[5b] special case for qemu interfaces $QEMU_IFACE_NAT $QEMU_IFACE_TAP" > $TOKMSG
 
 # for qemu only, use ip=10.0.2.15 gw=10.0.0.2: it's what the pseudo-dhcp server will always give
 [ -n "$QEMU_IFACE_NAT" ] \
- && $BBPATH/echo "[5c] assuming $QEMU_IFACE_NAT is from qemu given ^52:54 in the mac address" > $TOKMSG \
- && $BBPATH/ifconfig -a | grep -q "^$QEMU_IFACE_NAT\s*Link" \
- && $BBPATH/echo "[5d] given 52:54:0, using deterministic IP and route" > $TOKMSG \
+ && echo "[5c] assuming $QEMU_IFACE_NAT is from qemu given ^52:54 in the mac address" > $TOKMSG \
+ && $BBPATH/ifconfig -a | $BBPATH/grep -q "^$QEMU_IFACE_NAT\s*Link" \
+ && echo "[5d] given 52:54:0, using deterministic IP and route" > $TOKMSG \
  && $BBPATH/ip link set $QEMU_IFACE_NAT up \
  && $BBPATH/ip addr add 10.0.2.15/24 dev $QEMU_IFACE_NAT \
  && $BBPATH/ip route add default via 10.0.2.2 \
- && $BBPATH/echo "[5e] $QEMU_IFACE_NAT is 10.0.2.15/24, default route via 10.0.2.2" > $TOKMSG \
- || $BBPATH/echo "[5:c-e] $QEMU_IFACE_NAT nat network configuration: failed" > $TOKMSG
+ && echo "[5e] $QEMU_IFACE_NAT is 10.0.2.15/24, default route via 10.0.2.2" > $TOKMSG \
+ || echo "[5:c-e] $QEMU_IFACE_NAT nat network configuration: failed" > $TOKMSG
 
 # - assume the second interface sits on a private LAN to qemu, provide a fixed IP and start a DHCP server
 [ -n "$QEMU_IFACE_TAP" ] \
- && $BBPATH/echo "[5f] assuming last $QEMU_IFACE_TAP is from qemu given ^52:54 in the mac address" > $TOKMSG \
- && $BBPATH/ifconfig -a | grep -q "^$QEMU_IFACE_TAP\s*Link" \
- && $BBPATH/echo "[5g] using fixed IP to speedup boot" > $TOKMSG \
+ && echo "[5f] assuming last $QEMU_IFACE_TAP is from qemu given ^52:54 in the mac address" > $TOKMSG \
+ && $BBPATH/ifconfig -a | $BBPATH/grep -q "^$QEMU_IFACE_TAP\s*Link" \
+ && echo "[5g] using fixed IP to speedup boot" > $TOKMSG \
  && $BBPATH/ip link set $QEMU_IFACE_TAP up \
  && $BBPATH/ip addr add 172.20.20.1/16 dev $QEMU_IFACE_TAP \
- && $BBPATH/echo "[5h] $QEMU_IFACE_TAP is 172.20.20.116" \
- && $BBPATH/echo "[5i] adding a DHCP server" > $TOKMSG \
+ && echo "[5h] $QEMU_IFACE_TAP is 172.20.20.116" \
+ && echo "[5i] adding a DHCP server" > $TOKMSG \
  && $BBPATH/dnsmasq --interface=$QEMU_IFACE_TAP --bind-interfaces --dhcp-range=172.20.20.2,172.20.20.128 \
- && $BBPATH/echo "[5j] $QEMU_IFACE_TAP dhcp server (dnsmasq) provides leases from 172.20.20.2 to 172.20.20.128" \
- || $BBPATH/echo "[5:f-j] $QEMU_IFACE_TAP tap network configuration: failed" > $TOKMSG
+ && echo "[5j] $QEMU_IFACE_TAP dhcp server (dnsmasq) provides leases from 172.20.20.2 to 172.20.20.128" \
+ || echo "[5:f-j] $QEMU_IFACE_TAP tap network configuration: failed" > $TOKMSG
 
-OTHER_IFACES=$( $BBPATH/echo $IFACES | $BBPATH/sed -e "s/$QEMU_IFACE_NAT//g" -e "s/$QEMU_IFACE_TAP//g" -e 's/  */ /g' )
+OTHER_IFACES=$( echo $IFACES | $BBPATH/sed -e "s/$QEMU_IFACE_NAT//g" -e "s/$QEMU_IFACE_TAP//g" -e 's/  */ /g' )
 # For other interfaces, fork the DHCP client
 # TODO: that's the only for loop in these .sh, it would be nice to replace it with xarg
 for IFACE in $OTHER_IFACES; do
- $BBPATH/echo "[5k] non-qemu $IFACE: assuming it will respond to DHCP, spawning dhcpc" > $TOKMSG \
+ echo "[5k] non-qemu $IFACE: assuming it will respond to DHCP, spawning dhcpc" > $TOKMSG \
  # FIXME: to actually use the reply, udhcpc may need a -s prog handling $1=bound
  $BBPATH/udhcpc -q -f -n -i $IFACE && \
- $BBPATH/echo "done with DHCP $IFACE" > $TOKMSG &
+ echo "done with DHCP $IFACE" > $TOKMSG &
 done
 
 # for other qemu like bridges found on WSL1 and WSL2 post 2022, use udhcpc
@@ -139,12 +139,12 @@ done
 #    https://github.com/microsoft/WSL/issues/4467
 #   
 #[ -n $WSLX_IFACE ] \
-# && $BBPATH/echo "assuming $WSLX_IFACE is a bridge from WSL1 or post-2022 WSL2" > $TOKMSG \
+# && echo "assuming $WSLX_IFACE is a bridge from WSL1 or post-2022 WSL2" > $TOKMSG \
 # && $BBPATH/udhcpc -q -f -n -i $QEMU_IFACE \
-# && $BBPATH/echo "$WSLX_IFACE udhcpc succeeded" > $TOKMSG
+# && echo "$WSLX_IFACE udhcpc succeeded" > $TOKMSG
 
 ## Just for helping debug for now
-$BBPATH/echo "[5l] setting hostname to cosmopolinux.local" > $TOKMSG
+echo "[5l] setting hostname to cosmopolinux.local" > $TOKMSG
 $BBPATH/hostname cosmopolinux.local
 $BBPATH/hostname > $TOKMSG
 # but for fun, need a bonjour server to map that IP on 127/8
@@ -163,25 +163,25 @@ $BBPATH/hostname > $TOKMSG
 # when checking dmesg, can see more precisely:
 # the request at 3.85s fails, the one at 3.95s succeeds
 # It means the limiting factor for the TTFP is qemu network stack wasting about 3 seconds.
-$BBPATH/echo "[5m] in 2 seconds, testing qemu nat connectivity to 10.0.2.3 (qemu needs time)" > $TOKMSG
+echo "[5m] in 2 seconds, testing qemu nat connectivity to 10.0.2.3 (qemu needs time)" > $TOKMSG
 $BBPATH/sleep 2 \
  && $BBPATH/ping -c1 -W1 -w1 -n 10.0.2.3 > $TOKMSG 2>&1 \
- && $BBPATH/echo "[5n] got a reply from 10.0.2.3 (qemu nat)" > $TOKMSG \
- || $BBPATH/echo "[5n] no reply within 1 second from 10.0.2.3 (qemu nat)" > $TOKMSG \
+ && echo "[5n] got a reply from 10.0.2.3 (qemu nat)" > $TOKMSG \
+ || echo "[5n] no reply within 1 second from 10.0.2.3 (qemu nat)" > $TOKMSG \
  &
 
-$BBPATH/echo "[5n] in 2 seconds, testing outgoing connectivity to well known 1.1.1.1" > $TOKMSG
+echo "[5n] in 2 seconds, testing outgoing connectivity to well known 1.1.1.1" > $TOKMSG
 $BBPATH/sleep 2 \
  && $BBPATH/ping -c1 -W2 -w2 -n 1.1.1.1 > $TOKMSG 2>&1 \
- && $BBPATH/echo "[5n] got a reply from 1.1.1.1" > $TOKMSG \
- || $BBPATH/echo "[5n] no reply within 2 seconds from 1.1.1.1" > $TOKMSG \
+ && echo "[5n] got a reply from 1.1.1.1" > $TOKMSG \
+ || echo "[5n] no reply within 2 seconds from 1.1.1.1" > $TOKMSG \
  &
 
-$BBPATH/echo "[5n] in 2 seconds, testing outgoing connectivity + name resolution to well known google.com" > $TOKMSG
+echo "[5n] in 2 seconds, testing outgoing connectivity + name resolution to well known google.com" > $TOKMSG
 $BBPATH/sleep 2 \
  && $BBPATH/ping -c1 -W3 -w3 -n google.com > $TOKMSG 2>&1 \
- && $BBPATH/echo "[5n] got a reply from google.com" > $TOKMSG \
- || $BBPATH/echo "[5n] no reply within 3 second from google.com" > $TOKMSG \
+ && echo "[5n] got a reply from google.com" > $TOKMSG \
+ || echo "[5n] no reply within 3 second from google.com" > $TOKMSG \
  &
 
 ## TODO: could tear down stage 1 consoles, to make better ones now with getty
@@ -189,7 +189,7 @@ $BBPATH/sleep 2 \
 # yet 2) no agetty/getty equivalent in cosmopolitan binaries as of now
 # and 3) would not be much better than stage 1 consoles: would only gain respawn
 #  so 3) might as well keep an eye on the actual root view from initrd until then
-#$BBPATH/echo "[ ] starting new consoles" > $TOKMSG \
+#echo "[ ] starting new consoles" > $TOKMSG \
 #CONSOLE=ttyS0
 #PID_TTYS0=$( ps w|grep $CONSOLE|grep -v grep|sed -e 's/^  *//g' -e 's/ .*//g' )
 # or with xargs
@@ -222,17 +222,17 @@ $BBPATH/mkdir -p /rootfs /switchroot
 [ -n "$ROOTFLAGS" ] && PAR_ROOTFLAGS="-o $ROOTFLAGS"
 
 # then check if $ROOTFS is already mounted 'somewhere' (meaning field 3 not null) to mount bind instead
-$BBPATH/echo "[6a] cmdline asked rootfs=$ROOTFS, $ROOTFSTYPE and $ROOTFLAGS" > $TOKMSG
+echo "[6a] cmdline asked rootfs=$ROOTFS, $ROOTFSTYPE and $ROOTFLAGS" > $TOKMSG
 ROOTFS_ALREADY_MOUNTED=$( $BBPATH/mount | $BBPATH/grep "$ROOTFS" | $BBPATH/sed -e 's/.*on //g' -e 's/ .*//g' | $BBPATH/head -n1)
-$BBPATH/echo "[6b] checked in mounts: if already mounted, is on '$ROOTFS_ALREADY_MOUNTED'" > $TOKMSG
-$BBPATH/echo "[6c] if already mounted: mount -o bind $ROOTFS_ALREADY_MOUNTED /rootfs" > $TOKMSG
-$BBPATH/echo "[6d] if needs new mount: mount $ROOTFS $PAR_ROOTFSTYPE $PAR_ROOTFLAGS /rootfs" > $TOKMSG
+echo "[6b] checked in mounts: if already mounted, is on '$ROOTFS_ALREADY_MOUNTED'" > $TOKMSG
+echo "[6c] if already mounted: mount -o bind $ROOTFS_ALREADY_MOUNTED /rootfs" > $TOKMSG
+echo "[6d] if needs new mount: mount $ROOTFS $PAR_ROOTFSTYPE $PAR_ROOTFLAGS /rootfs" > $TOKMSG
 
 # TODO: that's like a dirty way to check for an empty/undefine, but it's more visual
 $BBPATH/mount | $BBPATH/grep "^$ROOTFS_ALREADY_MOUNTED on " > $TOKMSG \
  && $BBPATH/mount -o bind $ROOTFS_ALREADY_MOUNTED /rootfs \
  || $BBPATH/mount $ROOTFS $PAR_ROOTFSTYPE $PAR_ROOTFLAGS /rootfs \
- || $BBPATH/echo "[6] ERROR: failed to mount root, starting debug" > $TOKMSG
+ || echo "[6] ERROR: failed to mount root, starting debug" > $TOKMSG
 
 # WONTFIX: ugly but mounting root is one of the most fragile steps, not much to do here except
 # - adding a chkufsd step using the public android binaries
@@ -244,7 +244,7 @@ $BBPATH/dmesg | $BBPATH/tail -n1 | $BBPATH/grep "ERROR:" \
 [ -d /rootfs/chroot ] \
  && ROOTFS_DIR="/rootfs/chroot" \
  || ROOTFS_DIR="/rootfs"
-$BBPATH/echo "[7] using folder $ROOTFS_DIR within the rootfs" > $TOKMSG \
+echo "[7] using folder $ROOTFS_DIR within the rootfs" > $TOKMSG \
 
 # switch_root or manual equivalents will fail if newroot is not the root of a mount
 # here the ntfs fs is like the initrd: it has a separate ./chroot inside
@@ -252,7 +252,7 @@ $BBPATH/echo "[7] using folder $ROOTFS_DIR within the rootfs" > $TOKMSG \
 # TODO: a simpler recursive `mount --mount /newroot /` didn't work :
 #$BBPATH/mount --move /switchroot /
 # Therefore done manually:
-$BBPATH/echo "[8a] preparing mount binds of $ROOTFS_DIR to /switchroot" > $TOKMSG \
+echo "[8a] preparing mount binds of $ROOTFS_DIR to /switchroot" > $TOKMSG \
  && $BBPATH/mount -o bind $ROOTFS_DIR /switchroot \
  && $BBPATH/mount --bind /dev /switchroot/dev \
  && $BBPATH/mount --bind /dev/pts /switchroot/dev/pts \
@@ -263,8 +263,8 @@ $BBPATH/echo "[8a] preparing mount binds of $ROOTFS_DIR to /switchroot" > $TOKMS
  && $BBPATH/mount --bind /sys /switchroot/sys \
  && $BBPATH/mount --bind /initrd /switchroot/initrd \
  && $BBPATH/umount /rootfs \
- && $BBPATH/echo "[8b] mount binds to /switchroot done" > $TOKMSG \
- || $BBPATH/echo "[8b] ERROR: failed to mount bind the rootfs chroot/ folders, starting debug" > $TOKMSG
+ && echo "[8b] mount binds to /switchroot done" > $TOKMSG \
+ || echo "[8b] ERROR: failed to mount bind the rootfs chroot/ folders, starting debug" > $TOKMSG
 
 # WONTIFX: another ugly debug
 $BBPATH/dmesg | $BBPATH/tail -n1 | $BBPATH/grep "ERROR:" \
@@ -277,19 +277,19 @@ $BBPATH/dmesg | $BBPATH/tail -n1 | $BBPATH/grep "ERROR:" \
 
 [ -f /switchroot/stage3.sh ] \
  && [ -x /switchroot/stage3.sh ] \
- && $BBPATH/echo "[8c] found /switchroot/stage3.sh so considering it" > /$TOKMSG \
- && $BBPATH/echo "[8d] found /switchroot/stage3.sh executable, using it by default" > /$TOKMSG \
+ && echo "[8c] found /switchroot/stage3.sh so considering it" > /$TOKMSG \
+ && echo "[8d] found /switchroot/stage3.sh executable, using it by default" > /$TOKMSG \
  && NEXT="stage3.sh" \
  && TO_STAGE=3
 
 [ -f /switchroot/init ] \
  && [ -x /switchroot/init ] \
- && $BBPATH/echo "[8e] found /switchroot/init so considering it" > /$TOKMSG \
- && $BBPATH/echo "[8f] found /switchroot/init executable, overriding previous choice" > /$TOKMSG \
+ && echo "[8e] found /switchroot/init so considering it" > /$TOKMSG \
+ && echo "[8f] found /switchroot/init executable, overriding previous choice" > /$TOKMSG \
  && NEXT="init" \
  && TO_STAGE=I
 
-$BBPATH/echo "[8] going next to $NEXT in /switchroot/$NEXT as stage $TO_STAGE" > /$TOKMSG
+echo "[8] going next to $NEXT in /switchroot/$NEXT as stage $TO_STAGE" > /$TOKMSG
 
 # Can then attempt switch_root, pivot_root or chroot
 # WARNING: but can't use --move /switchroot here, or will miss the leaf fs on the branch
@@ -300,10 +300,10 @@ $BBPATH/echo "[8] going next to $NEXT in /switchroot/$NEXT as stage $TO_STAGE" >
 
 # List available ape loaders
 APES=$( $BBPATH/ls /switchroot/.ape* /switchroot/usr/bin/ape-* 2> /dev/null | $BBPATH/tr '\n' ' ') \
- && $BBPATH/echo "[9a] given APE loaders: $APES" > $TOKMSG
+ && echo "[9a] given APE loaders: $APES" > $TOKMSG
 # Will prefer the ape loader matching the machine
 MACHINE=$( $BBPATH/uname -m ) \
- && $BBPATH/echo "[9b] preparing switchroot on $MACHINE as PID $$" > $TOKMSG
+ && echo "[9b] preparing switchroot on $MACHINE as PID $$" > $TOKMSG
 
 # Default to the earliest ape in / if nothing else was found in /usr/bin
 [ -f /switchroot/usr/bin/ape-$MACHINE.elf ] \
@@ -311,17 +311,17 @@ MACHINE=$( $BBPATH/uname -m ) \
  || APE=$( $BBPATH/ls /switchroot/.ape-* 2> /dev/null | $BBPATH/sort -nr | $BBPATH/head -n 1 )
 
 # In any case, remove the /switchroot prefix and export the choice for the next stage
-export APE=$( $BBPATH/echo $APE | $BBPATH/sed -e 's|^/switchroot||' )
-$BBPATH/echo "[9c] selected APE=$APE and exported it, now doing:" > $TOKMSG
-$BBPATH/echo "[9d] exec $BBPATH/chroot /switchroot /usr/bin/ape-$MACHINE.elf /usr/bin/bash /$NEXT" > $TOKMSG
+export APE=$( echo $APE | $BBPATH/sed -e 's|^/switchroot||' )
+echo "[9c] selected APE=$APE and exported it, now doing:" > $TOKMSG
+echo "[9d] exec $BBPATH/chroot /switchroot /usr/bin/ape-$MACHINE.elf /usr/bin/bash /$NEXT" > $TOKMSG
 
 FROM_STAGE=2
 [ -f /switchroot/$APE ] \
- && $BBPATH/echo "[9e] got $APE in /switchroot" > $TOKMSG \
- && $BBPATH/echo $$ | $BBPATH/grep -q "^1$" \
- && $BBPATH/echo "[9f] got PID 1" > $TOKMSG \
+ && echo "[9e] got $APE in /switchroot" > $TOKMSG \
+ && echo $$ | $BBPATH/grep -q "^1$" \
+ && echo "[9f] got PID 1" > $TOKMSG \
  && exec $BBPATH/chroot /switchroot $APE /usr/bin/bash /$NEXT $FROM_STAGE $TO_STAGE < /dev/console \
- || $BBPATH/echo "[9e] ERROR: failed the exec chroot to switchroot folders, starting stage 2 debug" > $TOKMSG
+ || echo "[9e] ERROR: failed the exec chroot to switchroot folders, starting stage 2 debug" > $TOKMSG
 
 # This demonstrates how to give PID 1 to cosmopolitan bash and shows:
 #  - which equivalent to busybox tools may be needed (ex: mount, for UKI boot tweaks need efibootmgr)
@@ -330,7 +330,7 @@ FROM_STAGE=2
 
 # give a shell to debug if can't get PID 1 for whatever unlikely reason
 [ -f /usr/bin/bash ] \
- && $BBPATH/echo "[9] was not PID 1 or was missing APE, starting stage 2 debug with bash if possible " > $TOKMSG \
+ && echo "[9] was not PID 1 or was missing APE, starting stage 2 debug with bash if possible " > $TOKMSG \
  && [ -f $APE ] \
  && PATH=$PATH:/busybox exec $APE /usr/bin/bash \
  || PATH=$PATH:/busybox exec /busybox/ash
