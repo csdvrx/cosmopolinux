@@ -15,7 +15,7 @@
 #  - study how cosmopolinux could use kernels for replacing ESXi (host)
 
 ### Parameters
-QEMU="/usr/sbin/qemu-system-x86_64"
+QEMU=$(type -p qemu-system-x86_64)
 QEMU_KERNEL="./kernel.bzImage"
 QEMU_INITRD="./initrd.cpio.gz"
 VNC="gvncviewer"
@@ -181,12 +181,23 @@ TTY="$TTYS0 $TTYS1 $TTYS2 $TTYS3"
 
 # WONTFIX: will have 52:54:01 for the 1st mac + ensure it's never 00:12:34:56
 # can then disambiguate the 2 interfaces regardless of the host enumeration order
-printf -v macaddr0 "52:54:00:%02x:%02x:%02x" \
- $(( $RANDOM & 0xff )) $(( $RANDOM & 0xff)) $(( $RANDOM & 0xff ))
-printf -v macaddr1 "52:54:01:%02x:%02x:%02x" \
- $(( $RANDOM & 0xff )) $(( $RANDOM & 0xff)) $(( $RANDOM & 0xff ))
-printf -v macaddr2 "52:54:10:%02x:%02x:%02x" \
- $(( $RANDOM & 0xff )) $(( $RANDOM & 0xff)) $(( $RANDOM & 0xff ))
+
+# Check if $RANDOM is defined, if so use it
+[ -n "$RANDOM" ] \
+ && macaddr0=$(printf "52:54:00:%02x:%02x:%02x" \
+   $(( $RANDOM & 0xff )) $(( $RANDOM & 0xff)) $(( $RANDOM & 0xff )) \
+ ) \
+ && macaddr1=$(printf "52:54:01:%02x:%02x:%02x" \
+   $(( $RANDOM & 0xff )) $(( $RANDOM & 0xff)) $(( $RANDOM & 0xff )) \
+ ) \
+ && macaddr2=$(printf "52:54:10:%02x:%02x:%02x" \
+   $(( $RANDOM & 0xff )) $(( $RANDOM & 0xff)) $(( $RANDOM & 0xff )) \
+ )
+
+# If the macs couldn't be randomized, assign in a deterministic pattern
+[ -z "$macaddr0" ] && macaddr0="52:54:00:12:34:56"
+[ -z "$macaddr1" ] && macaddr1="52:54:01:12:34:57"
+[ -z "$macaddr2" ] && macaddr2="52:54:10:12:34:58"
 
 # Then use the new way with netdev: accelerated, without hub
 # cf https://www.qemu.org/2018/05/31/nic-parameter/
