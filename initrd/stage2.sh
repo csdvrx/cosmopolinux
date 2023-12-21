@@ -280,15 +280,15 @@ $BBPATH/dmesg | $BBPATH/tail -n1 | $BBPATH/grep "ERROR:" \
 # or by default the usual "init" if present and executable in switchroot
 
 [ -f /switchroot/stage3.sh ] \
- && [ -x /switchroot/stage3.sh ] \
  && echo "[8c] found /switchroot/stage3.sh so considering it" > /$TOKMSG \
+ && [ -x /switchroot/stage3.sh ] \
  && echo "[8d] found /switchroot/stage3.sh executable, using it by default" > /$TOKMSG \
  && NEXT="stage3.sh" \
  && TO_STAGE=3
 
 [ -f /switchroot/init ] \
- && [ -x /switchroot/init ] \
  && echo "[8e] found /switchroot/init so considering it" > /$TOKMSG \
+ && [ -x /switchroot/init ] \
  && echo "[8f] found /switchroot/init executable, overriding previous choice" > /$TOKMSG \
  && NEXT="init" \
  && TO_STAGE=I
