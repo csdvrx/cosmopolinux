@@ -9,11 +9,13 @@ These instructions are a WIP. When NTFS bitlocker is supported, the suggested de
 
 2. Place cosmopolinux UKI and the grubfm matching your machine arch in your EFI boot partition
 
-2a. Can do that automatically:
+2a. Can do that either on Linux:
+
+2a1. Automatically with a script:
 
     ./2_uki-copy.sh
 
-2b. Alternatively, can do that manually:
+2a2. Alternatively, can do that manually:
 
     mount /dev/nvme0n1p1 /mnt
     MACHINE=$( uname -m)
@@ -28,28 +30,49 @@ NB: it's NOT recommended, but on x86-64, you could also use grubfm as your defau
     cp grubfm-x86_64.efi /mnt/EFI/Boot/bootx64.efi
     umount /mnt
 
+2b. On Windows, manually:
+
+    diskpart
+    sel disk 0
+    sel part 1
+    detail par
+
+If the GPI partition matches the EFI UUID C12A7328-F81F-11D2-BA4B-00A0C93EC93B (or the MBR magic matches EF00):
+
+    assign letter=s:
+    mountvol S: /s
+
+Then from a command line, a powershell or a filemanager with administrative permissions, add the files to S:\EFI\
+
+    copy grubfm-x86_64.efi S:\EFI
+    copy cosmopolinux.efi S:\EFI
+
 3. Add to your UEFI an entry either:
 
-3a. Automatically, either:
+3a. From Linux, either:
 
-3a1. From Linux:
+3a1. Automatically with:
 
     3_uki-install-fromlinux.sh
 
-3b1. (TODO: figure how to do that from Windows with a Powershell script)
+3b1. Manully, with either or both of:
 
-3b. Manully, with either or both of:
-
-3b1. grubfm.efi (to be able to select either cosmopolinux.efi or windows.efi) from a Ubuntu Live matching your machine:
+3b1a. grubfm.efi (to be able to select either cosmopolinux.efi or windows.efi) from a Ubuntu Live matching your machine:
 
     MACHINE=$( uname -m)
     efibootmgr -d /dev/nvme0n1 -p 1 -C -l "\\EFI\\grubfm-$MACHINE.efi" -L "GrubFM"
 
 (TODO: figure how to do that from Windows with winload.exe that reads the BCD to load the kernel (ntoskrnl.exe)
 
-3b2. cosmopolinux.efi for direct and faster boot (FIXME: for now, the kernel is x86-64 only, add compile scripts to support both x86-64 and aarch64)
+3b1b. ccosmopolinux.efi for direct and faster boot (FIXME: for now, the kernel is x86-64 only, add compile scripts to support both x86-64 and aarch64)
 
     efibootmgr -d /dev/nvme0n1 -p 1 -C -l "\\EFI\\cosmopolinux.efi" -L "Cosmopolinux"
+
+3b. From Windows, either:
+
+3a1. TODO: figure how to do that from Windows with a Powershell script
+
+3b2. Manually with [EasyUEFI](https://www.easyuefi.com/index-us.html)
 
 4. Create a 1G partition by shrinking existing partitions and creating a new one in the freed space
 
