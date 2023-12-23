@@ -1,15 +1,15 @@
-# ☪☮$m✡✝🍏linux, in pictures
+# ☪ ☮$m✡✝🍏linux in pictures
 
-☪☮$m✡✝🍏linux (henceforth referred to as "Cosmopolinux") boots a linux kernel in qemu and starts a cosmopolitan bash in less than half a second:
+☪ ☮$m✡✝🍏linux (henceforth referred to as "Cosmopolinux") boots a linux kernel in qemu and starts a cosmopolitan bash in less than half a second:
 ![screenshot of booting to bash in half a second](screenshots/qemu-bash-halfsecond.png)
 
 The full boot sequence can be seen in this asciinema recording of the qemu console:
 ![console recoding when booting to bash in half a second](recordings/qemu-console.gif)
 
 When recording qemu GTK output with OBS studio, it takes a little longer to get bash, but Cosmopolinux still gets you there in less than half a second:
-![qemu gtk booting to bash in half a second](recordings/qemu-gtk.gif)
+![qemu gtk booting to bash in half a second](recordings/qemu-gtk.mp4)
 
-If Cosmopolinux looks like a quaint minimalistic retrocomputing Linux CLI, ["mission accomplished"](https://en.wikipedia.org/wiki/Mission_Accomplished): it's my 2023 Christmas project, to show it's possible to [☪☮e✡i$✝ peacefully with other OSes](https://en.wikipedia.org/wiki/Coexist) and move beyond the sterile "religious" flamewars about Windows and Linux (I love them both!)
+If Cosmopolinux looks like a quaint minimalistic retrocomputing Linux CLI, ["mission accomplished"](https://en.wikipedia.org/wiki/Mission_Accomplished): it's my 2023 Christmas project, to show it's possible to [☪ ☮e✡i$✝  peacefully with other OSes](https://en.wikipedia.org/wiki/Coexist) and move beyond the sterile "religious" flamewars about Windows and Linux (I love them both!)
 
 Cosmopolinux will get you the simplest possible command line experience, as fast as possible yet with a quite a few modern extras such as [a sqlite shell history](https://github.com/csdvrx/bash-timestamping-sqlite/) - and of course, Qemu and a linux kernel v6.2.
 
@@ -75,11 +75,21 @@ The 3 stages are just arbitrary boundaries:
  - stage 0 is not really a stage, but a starting point: it's a script to help when booting, either baremetal (TODO: a script to make a UKI and ISO image) or through emulators like qemu (TODO: support more emulators like vmware, virtualbox, parallels)
  - stage 1 is when the constraints are the highest (ex: no /usr no dev, actually no filesystem is expected to be available outside initrd as the kernel may just have booted, and everything is in 1 folder, to coexist with a native OS)
  - stage 2 is when some expectations are met (ex: having the usual filesystems mounted and ready in their usual spot like /dev and /proc, thanks to switchroot; being root; being able to debug on some consoles) but not all (ex: not using /usr, since that's were cosmo fat binaries go)
- - stage 3 is when most expectations are met (ex: has /usr, has /dev, as /proc...) and all constraints are removed since everything should now be a cosmopolitan binary! (TODO: except busybox, to be replaced by sbase-box ASAP)
+ - stage 3 is when most expectations are met (ex: has /usr, has /dev, as /proc...) and all constraints are removed since everything should now be a cosmopolitan binary! (TODO: except busybox, hard to replaced by sbase-box)
 
-You could start from stage 3 directly: this would be the case if you just want a comfortable terminal experience and can meet most of the stage 3 script expectations.
+You could start from stage 3 directly: stage 3 tries to set everything right and respawn the binaries, so you can't leave it by accident even if started directly. You can do that if you just want a comfortable terminal experience and can meet most of the stage 3 script expectations in your OS.
 
-On the other end of the spectrum, you can run everything through qemu starting at stage 0: it's just heavier: the more staging steps you require, the more assets (and computation) you need. You can get more speed by staying native as long as possible, and avoiding unnecessary steps, but this may cost you flexibility.
+On the other end of the spectrum, you can run everything through qemu starting at stage 0, it's just heavier: the more staging steps you require, the more assets (and computation) you need. You can get more speed by staying native as long as possible, and avoiding unnecessary steps, but this may cost you flexibility.
+
+There's also a "stage 9", a "final stage" that can be entered :
+ - by calling /initrd/join-stage9.sh from the consoles
+ - or directly started though /initrd/stage9.sh
+
+Stage 9 will unmount your NTFS partition, so it's not marked dirty (and needs a fsck) for the next boot.
+
+The very first version did only remount the partition as read-only, but this is not suitable for other filesystems so stage 9 was improved to be run as PID 1 whenever possible. 
+
+This happens even if stage 9 is called by the join script running in a console: this is done by sending 2 kills very quickly to stage 3, which the starts stage 9. If stage 9 is called directly from a console, the same thing should happen thanks to a small delay allowing PID 1 to win the race to stage 9.
 
 # Why so many stages?
 
