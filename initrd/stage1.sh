@@ -143,14 +143,16 @@ $BBPATH/mkdir ./chroot/initrd
 $BBPATH/mount -o bind / ./chroot/initrd
 # At this point, rdinit passes the puck to stage 2 in /chroot/
 # If there's no stage 2 file, starts a shell: bash is preferred
-# This is only for simplicity: could also use ./chroot/initrd/stage2.sh
+# WONTFIX: if copying stage2 to ./chroot for simplicity, why not add them all?
+# like below: && $BBPATH/cp ./stage2.sh ./chroot \
+# (...) exec $BBPATH/chroot ./chroot /stage2.sh (...)
+# stage3 and stage9 are not not needed there either: better stick to /initrd
 CURRENT_STAGE=1
 NEXT_STAGE=2
 [ -f ./stage2.sh ] \
- && $BBPATH/cp ./stage2.sh ./chroot \
  && echo "[4a] preparing stage 2 inside /chroot" > $TOKMSG \
- && $BBPATH/stat -c "%y %s %n" ./chroot/stage2.sh > $TOKMSG \
- && exec $BBPATH/chroot ./chroot /stage2.sh $CURRENT_STAGE $NEXT_STAGE < ./chroot/dev/console \
+ && $BBPATH/stat -c "%y %s %n" ./chroot/initrd/stage2.sh > $TOKMSG \
+ && exec $BBPATH/chroot ./chroot /initrd/stage2.sh $CURRENT_STAGE $NEXT_STAGE < ./chroot/dev/console \
  || echo "[4] no stage 2 due to missing ./chroot/stage2.sh, trying $APE for bash if present, defaulting to ash" > $TOKMSG \
  && [ -f $APE ] \
  && [ -f ./chroot/usr/bin/bash ] \
