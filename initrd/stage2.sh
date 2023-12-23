@@ -324,12 +324,14 @@ export APE=$( echo $APE | $BBPATH/sed -e 's|^/switchroot||' )
 echo "[9c] selected APE=$APE and exported it, now doing:" > $TOKMSG
 echo "[9d] exec $BBPATH/chroot /switchroot /usr/bin/ape-$MACHINE.elf /usr/bin/bash /$NEXT" > $TOKMSG
 
+# FIXME: if not doing a switchroot instead of a chroot, rename 'chroot' to 'cosmopolinux'
+# WARNING: connect to the dev/console relative to the chroot 
 FROM_STAGE=2
 [ -f /switchroot/$APE ] \
  && echo "[9e] got $APE in /switchroot" > $TOKMSG \
  && echo $$ | $BBPATH/grep -q "^1$" \
  && echo "[9f] got PID 1" > $TOKMSG \
- && exec $BBPATH/chroot /switchroot $APE /usr/bin/bash /$NEXT $FROM_STAGE $TO_STAGE < /dev/console \
+ && exec $BBPATH/chroot /switchroot $APE /usr/bin/bash /$NEXT $FROM_STAGE $TO_STAGE < /switchroot/dev/console \
  || echo "[9e] ERROR: failed the exec chroot to switchroot folders, starting stage 2 debug" > $TOKMSG
 
 # This demonstrates how to give PID 1 to cosmopolitan bash and shows:
@@ -341,5 +343,5 @@ FROM_STAGE=2
 [ -f /usr/bin/bash ] \
  && echo "[9] was not PID 1 or was missing APE, starting stage 2 debug with bash if possible " > $TOKMSG \
  && [ -f $APE ] \
- && PATH=$PATH:/busybox exec $APE /usr/bin/bash \
+ && PATH=$PATH:/busybox exec $APE /usr/bin/bash < /dev/console \
  || PATH=$PATH:/busybox exec /busybox/ash
