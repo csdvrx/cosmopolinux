@@ -30,29 +30,29 @@
 #[ -f /proc/sys/fs/binfmt_misc/status ] \
 # && echo '-1' >/proc/sys/fs/binfmt_misc/status
 ## But can do better, and fix both WSL Ubuntu by leaving things as-is and add:
-#[ -z "${MACHINE}" ] \
-# && [ -x ./usr/bin/uname ]
-# && export MACHINE=$( ./usr/bin/uname -a )
-#[ -z "${APE}" ] \
-# && [ -f "./usr/bin/ape-${APE}.elf" ]
-# && APE="./usr/bin/ape-${APE}.elf"
-#[ -f "${APE}" ] \
-# && [ -f /proc/sys/fs/binfmt_misc/register ] \
-# && [ "$(ls /proc/sys/fs/binfmt_misc/APE*| wc -l)" -le 1 ] \
-# && DOBINFMT=1
-#[ -n "${DOBINFMT}" ] \
-# && id | sed -e 's/gid.*//g' | grep "id=0" \
-# && echo ":APE:M::MZqFpD::$APE:" >/proc/sys/fs/binfmt_misc/register \
-# && echo ":APE-jart:M::jartsr::$APE:" >/proc/sys/fs/binfmt_misc/register
+[ -z "${MACHINE}" ] \
+ && [ -x ./usr/bin/uname ] \
+ && export MACHINE=$( ./usr/bin/uname -a )
+[ -z "${APE}" ] \
+ && [ -f "./usr/bin/ape-${APE}.elf" ] \
+ && APE="./usr/bin/ape-${APE}.elf"
+[ -f "${APE}" ] \
+ && [ -f /proc/sys/fs/binfmt_misc/register ] \
+ && [ "$(ls /proc/sys/fs/binfmt_misc/APE*| wc -l)" -le 1 ] \
+ && DOBINFMT=1
+[ -n "${DOBINFMT}" ] \
+ && id | sed -e 's/gid.*//g' | grep "id=0" \
+ && echo ":APE:M::MZqFpD::$APE:" >/proc/sys/fs/binfmt_misc/register \
+ && echo ":APE-jart:M::jartsr::$APE:" >/proc/sys/fs/binfmt_misc/register
 
 ## Use kmsg if with just the available tools detects stage change + uid 0
-# stage 9 will be used to reboot cleanly, but iff a kernel is used
-# detect that by checking the args (from+to stage) and the hostname
+# iff a kernel is used (check args: from+to), stage 9 will reboot cleanly
 # TODO: may later support namespaces, will have to fix the detection
+# for ex by checking the hostname is cosmopolinux (will need extra tools)
 [ -n "$1" ] && [ -n "$2" ] \
  && FROM_STAGE="from stage $1 going to $2" \
- && export FINAL_STAGE="exec /initrd/stage9.sh"
- && hostname | grep -q cosmopolinux \
+ && [ -x /initrd/stage9.sh ] \
+ && export FINAL_STAGE="exec /initrd/stage9.sh" \
  || export FINAL_STAGE="echo 'outside cosmopolinux; not rebooting'"
 [ -n "${FROM_STAGE}" ] \
  && id | sed -e 's/gid.*//g' | grep "id=0" \
@@ -60,7 +60,6 @@
  && echo -n "[9] stage 3 (bash) reached ${FROM_STAGE}" > /dev/kmsg \
  || echo "[9] stage 3 (bash) reached ${FROM_STAGE}"
 
-# FIXME: job control problems, doing set -m here doesn't help
 # Check the standard input is connected and explain what's happening
 TTY=$( tty )
 # This tty check avoids errors due to a missing stdin fd like:
@@ -70,7 +69,7 @@ TTY=$( tty )
 # cf https://github.com/fabric/fabric/issues/395#issuecomment-32219270
 # cf https://www.linuxjournal.com/content/job-control-bash-feature-you-only-think-you-dont-need
 echo
-echo "Currently running '$0 $*' as pid $! on tty $TTY"
+echo "Currently running '$0 $*' as pid $$ on tty $TTY"
 echo
 echo "You have opt/cosmocc opt/git and other cosmopolitan binaries to play with"
 echo 
@@ -124,9 +123,9 @@ trap_with_arg () {
 # primitive respawn of the command + trap
 respawner() {
  # TODO: decide if it's a bad idea to use the APE loader here
- $APE $command $parameters
+ $APE $command $parameters < /dev/console
  restart_command() {
-  echo "unless receiving a signal like SIGINT (Ctrl+C), $$ will respawn $APE $command $parameters in 2 seconds"
+  echo "unless receiving a signal like SIGINT (Ctrl+C), $$ will respawn $APE $command $parameters < /dev/console in 2 seconds"
   echo "with a signal, instead of respawning, will run $FINAL_STAGE"
   # list traps
   #trap
@@ -152,10 +151,12 @@ respawner() {
  restart_command
 }
 
-# save the pid
+# FIXME: job control problems, doing set -m here doesn't help
+# save the pid, mention the stdin redirection is outside the parameters
 pid=$$
 [ "${pid}" == 1 ] \
- && echo "As PID 1, starting with exit protection '$APE $command $parameters' to avoid killing init" \
+ && echo "As PID 1, starting with exit protection '$APE $command $parameters < /dev/console' to avoid killing init" \
+ && echo "For backgrounding with &, enable job control with: set -m" \
  && respawner \
  || echo "Starting normally '$APE $command $parameters' without any special protection" \
  && $APE $command $parameters

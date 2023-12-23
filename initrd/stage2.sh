@@ -222,6 +222,9 @@ $BBPATH/sleep 2 \
  && ROOTFSTYPE=$( $BBPATH/xargs -n1 -a /proc/cmdline | $BBPATH/grep "^rootfstype=" | $BBPATH/head -n 1 | $BBPATH/sed -e 's/^rootfstype=//g')
 [ -f /proc/cmdline ] \
  && ROOTFLAGS=$( $BBPATH/xargs -n1 -a /proc/cmdline | $BBPATH/grep "^rootflags=" | $BBPATH/head -n 1 | $BBPATH/sed -e 's/^rootflags=//g')
+[ -f /proc/cmdline ] \
+ && $BBPATH/grep -q "init=" /proc/cmdline \
+ && INIT=$( $BBPATH/xargs -n1 -a /proc/cmdline | $BBPATH/grep "^init=" | $BBPATH/head -n 1 | $BBPATH/sed -e 's/^init=//g')
 
 # prepare 2 dirs, the mount arguments if available, and use these for rootfs mount
 $BBPATH/mkdir -p /rootfs /switchroot
@@ -246,7 +249,7 @@ $BBPATH/mount | $BBPATH/grep "^$ROOTFS_ALREADY_MOUNTED on " > $TOKMSG \
 # - adding a chkufsd step using the public android binaries
 # - offering to debug the issue with a sane path
 $BBPATH/dmesg | $BBPATH/tail -n1 | $BBPATH/grep "ERROR:" \
- && PATH=/usr/sbin:/usr/bin:/$BBPATH exec /busybox/ash
+ && PATH=/usr/bin:/$BBPATH exec /busybox/ash
 
 # If there's a single /chroot folder in the rootfs (as expected with ntfs), use it by default
 [ -d /rootfs/chroot ] \
@@ -276,29 +279,37 @@ echo "[8a] preparing mount binds of $ROOTFS_DIR to /switchroot" > $TOKMSG \
 
 # WONTIFX: another ugly debug
 $BBPATH/dmesg | $BBPATH/tail -n1 | $BBPATH/grep "ERROR:" \
- && PATH=/usr/sbin:/usr/bin:/$BBPATH exec /busybox/ash
+ && PATH=/usr/bin:/$BBPATH exec /busybox/ash
 
 # WONTFIX: regardless how, hides rootfs /chroot from mount + /proc/mounts
 # cf https://unix.stackexchange.com/questions/152029/why-is-there-no-rootfs-file-system-present-on-my-system
 # What will be done next depends: stage3.sh or the init=parameter
 # or by default the usual "init" if present and executable in switchroot
 
-# FIXME: could automatically update the stage3 and stage-9 from the files in /initrd
-[ -f /switchroot/stage3.sh ] \
- && echo "[8c] found /switchroot/stage3.sh so considering it" > /$TOKMSG \
- && [ -x /switchroot/stage3.sh ] \
- && echo "[8d] found /switchroot/stage3.sh executable, using it by default" > /$TOKMSG \
- && NEXT="stage3.sh" \
+[ -f /switchroot/initrd/stage3.sh ] \
+ && echo "[8c] found /switchroot/initrd/stage3.sh so considering it" > /$TOKMSG \
+ && [ -x /switchroot/initrd/stage3.sh ] \
+ && echo "[8d] found /switchroot/initrd/stage3.sh executable, using it by default" > /$TOKMSG \
+ && NEXT="/usr/bin/bash /initrd/stage3.sh" \
  && TO_STAGE=3
 
 [ -f /switchroot/init ] \
  && echo "[8e] found /switchroot/init so considering it" > /$TOKMSG \
  && [ -x /switchroot/init ] \
  && echo "[8f] found /switchroot/init executable, overriding previous choice" > /$TOKMSG \
- && NEXT="init" \
+ && NEXT="/init" \
  && TO_STAGE=I
 
-echo "[8] going next to $NEXT in /switchroot/$NEXT as stage $TO_STAGE" > /$TOKMSG
+[ -f "/switchroot/$INIT" ] \
+ && echo "[8g] found /switchroot/$INIT so considering it" > /$TOKMSG \
+ && [ -x "/switchroot/$INIT" ] \
+ && echo "[8h] found /switchroot/$INIT executable, overriding previous choice" > /$TOKMSG \
+ && NEXT="/$INIT" \
+ && TO_STAGE=I
+
+# Can then attempt switch_root, pivot_root or chroot
+
+echo "[8] going next to $NEXT in /switchroot as stage $TO_STAGE" > /$TOKMSG
 
 # Can then attempt switch_root, pivot_root or chroot
 # WARNING: but can't use --move /switchroot here, or will miss the leaf fs on the branch
@@ -322,7 +333,7 @@ MACHINE=$( $BBPATH/uname -m ) \
 # In any case, remove the /switchroot prefix and export the choice for the next stage
 export APE=$( echo $APE | $BBPATH/sed -e 's|^/switchroot||' )
 echo "[9c] selected APE=$APE and exported it, now doing:" > $TOKMSG
-echo "[9d] exec $BBPATH/chroot /switchroot /usr/bin/ape-$MACHINE.elf /usr/bin/bash /$NEXT" > $TOKMSG
+echo "[9d] exec $BBPATH/chroot /switchroot /usr/bin/ape-$MACHINE.elf $NEXT" > $TOKMSG
 
 # FIXME: if not doing a switchroot instead of a chroot, rename 'chroot' to 'cosmopolinux'
 # WARNING: connect to the dev/console relative to the chroot 
@@ -331,7 +342,7 @@ FROM_STAGE=2
  && echo "[9e] got $APE in /switchroot" > $TOKMSG \
  && echo $$ | $BBPATH/grep -q "^1$" \
  && echo "[9f] got PID 1" > $TOKMSG \
- && exec $BBPATH/chroot /switchroot $APE /usr/bin/bash /$NEXT $FROM_STAGE $TO_STAGE < /switchroot/dev/console \
+ && exec $BBPATH/chroot /switchroot $APE $NEXT $FROM_STAGE $TO_STAGE < /switchroot/dev/console \
  || echo "[9e] ERROR: failed the exec chroot to switchroot folders, starting stage 2 debug" > $TOKMSG
 
 # This demonstrates how to give PID 1 to cosmopolitan bash and shows:
