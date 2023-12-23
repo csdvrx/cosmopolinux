@@ -166,25 +166,29 @@ $BBPATH/hostname cosmopolinux.local \
 # when checking dmesg, can see more precisely:
 # the request at 3.85s fails, the one at 3.95s succeeds
 # It means the limiting factor for the TTFP is qemu network stack wasting about 3 seconds.
-echo "[5m] in 2 seconds, testing qemu nat connectivity to 10.0.2.3 (qemu needs time)" > $TOKMSG
+
+echo "[5m] in 2 seconds, testing qemu nat connectivity to 10.0.2.3 (qemu nat needs time)" > $TOKMSG
 $BBPATH/sleep 2 \
+ && echo "[5m1] now testing 10.0.2.3" > $TOKMSG \
  && $BBPATH/ping -c1 -W1 -w1 -n 10.0.2.3 > $TOKMSG 2>&1 \
- && echo "[5n] got a reply from 10.0.2.3 (qemu nat)" > $TOKMSG \
- || echo "[5n] no reply within 1 second from 10.0.2.3 (qemu nat)" > $TOKMSG \
+ && echo "[5m2] got a reply from 10.0.2.3" > $TOKMSG \
+ || echo "[5m3] no reply within 1 second from 10.0.2.3" > $TOKMSG \
  &
 
 echo "[5n] in 2 seconds, testing outgoing connectivity to 1.1.1.1" > $TOKMSG
 $BBPATH/sleep 2 \
+ && echo "[5n1] now testing 1.1.1.1" > $TOKMSG \
  && $BBPATH/ping -c1 -W2 -w2 -n 1.1.1.1 > $TOKMSG 2>&1 \
- && echo "[5n] got a reply from 1.1.1.1" > $TOKMSG \
- || echo "[5n] no reply within 2 seconds from 1.1.1.1" > $TOKMSG \
+ && echo "[5n2] got a reply from 1.1.1.1" > $TOKMSG \
+ || echo "[5n2] no reply within 2 seconds from 1.1.1.1" > $TOKMSG \
  &
 
-echo "[5n] in 2 seconds, testing outgoing connectivity + name resolution to google.com" > $TOKMSG
+echo "[5o] in 2 seconds, testing outgoing connectivity + name resolution to google.com" > $TOKMSG
 $BBPATH/sleep 2 \
+ && echo "[5o1] now testing google.com" > $TOKMSG \
  && $BBPATH/ping -c1 -W3 -w3 -n google.com > $TOKMSG 2>&1 \
- && echo "[5n] got a reply from google.com" > $TOKMSG \
- || echo "[5n] no reply within 3 second from google.com" > $TOKMSG \
+ && echo "[5o2] got a reply from google.com" > $TOKMSG \
+ || echo "[5o2] no reply within 3 second from google.com" > $TOKMSG \
  &
 
 ## TODO: could tear down stage 1 consoles, to make better ones now with getty
@@ -279,6 +283,7 @@ $BBPATH/dmesg | $BBPATH/tail -n1 | $BBPATH/grep "ERROR:" \
 # What will be done next depends: stage3.sh or the init=parameter
 # or by default the usual "init" if present and executable in switchroot
 
+# FIXME: could automatically update the stage3 and stage-9 from the files in /initrd
 [ -f /switchroot/stage3.sh ] \
  && echo "[8c] found /switchroot/stage3.sh so considering it" > /$TOKMSG \
  && [ -x /switchroot/stage3.sh ] \
