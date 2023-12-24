@@ -9,7 +9,7 @@ The full boot sequence can be seen in this asciinema recording of the qemu conso
 When recording qemu GTK output with OBS studio, it takes a little longer to get bash, but Cosmopolinux still gets you there in less than half a second:
 ![qemu gtk booting to bash in half a second](recordings/qemu-gtk.mp4)
 
-If Cosmopolinux looks like a quaint minimalistic retrocomputing Linux CLI, ["mission accomplished"](https://en.wikipedia.org/wiki/Mission_Accomplished): it's my 2023 Christmas project, to show it's possible to [☪ ☮e✡i$✝  peacefully with other OSes](https://en.wikipedia.org/wiki/Coexist) and move beyond the sterile "religious" flamewars about Windows and Linux (I love them both!)
+If Cosmopolinux looks like a quaint minimalistic retrocomputing Linux CLI, ["mission accomplished"](https://en.wikipedia.org/wiki/Mission_Accomplished): it's my 2023 Christmas project, to show it's possible to [☪ ☮e✡i$✝  peacefully with other OSes](https://en.wikipedia.org/wiki/Coexist) and move beyond the sterile "religious" flamewars about Windows and Linux (I love them both!) thanks to an [αcτµαlly pδrταblε εxεcµταblε](https://justine.lol/ape.html) base.
 
 Cosmopolinux will get you the simplest possible command line experience, as fast as possible yet with a quite a few modern extras such as [a sqlite shell history](https://github.com/csdvrx/bash-timestamping-sqlite/) - and of course, Qemu and a linux kernel v6.2.
 
@@ -29,9 +29,7 @@ You can then connect normally:
  - by VNC (on port 5900 of localhost)
  - in the future, through [a http ttyd](https://github.com/tsl0922/ttyd) (TODO: compile ttyd with cosmopolitan, [prepare some mDNS candy](https://github.com/csdvrx/PerlPleBean/blob/main/experiments/bonjour-server.pl))
 
-If you find something you like in cosmopolinux, you can extract and use the binaries you find within cosmopolinux on your OS: since they are cosmopolitan binaries (TODO: except busybox, can't replace it by sbase-box: missing mount), they will work without requiring virtualization or emulation.
-
-Stage 1 sheds some consoles in the early stages, so if you want to see what's happening behind the curtains of cosmopolinux init scripts, you can also connect to:
+Stage 1 sheds some consoles in the early stages, so if you want to see what's happening behind the curtains of cosmopolinux init scripts, you can also connect to it:
 
  - though stdio, automatically (if running ./stage0-qemu.sh from a terminal),
  - through qemu emulated serial port: use `picocom -b 38400 /dev/pts/X` (where X is the integer given by ./stage0-qemu.sh)
@@ -39,22 +37,24 @@ Stage 1 sheds some consoles in the early stages, so if you want to see what's ha
 
 In any case, you should immediately get a commandline, without having to bother with pesky little things and practical annoyances like passwords :)
 
+If you find something you like in cosmopolinux, you can extract and use the binaries you find within cosmopolinux on your OS: since they are cosmopolitan binaries (TODO: except busybox, can't yet replace it by sbase-box: missing mount), they will work without requiring virtualization or emulation.
+
 # I did that, but cosmopolinux is not like the pictures!
 
-If you want to automatically get a graphical window like in the qemu-gtk.mp4 example, edit stage0-qemu.sh to use a different -view option, or to automatically start a VNC client for you.
+If you want to automatically get a graphical window like in the recordings/qemu-gtk.mp4 example, edit stage0-qemu.sh to use a different -view option, or to automatically start a VNC client for you.
 
 If you use one of the early stage consoles in a terminal, you will see the filesystem tree as it is *AFTER* the first chroot but *BEFORE* the switchroot which exposes all the interesting cosmopolitan binaries that make cosmopolinux.
 
-This is by design for now (TODO: on stage 3, PID 1 should close the existing consoles and open new ones, try to have that bash in tmux to share the session)
+This is by design for now (TODO: on stage 3, PID 1 should close the existing consoles and open new ones, or try to have the bash it starts within tmux to share the session and reptyr the consoles)
 
-You can still get cosmopolitan bash with either `chroot /switchroot/ /.ape-1.9 /usr/bin/bash` or by running `/initrd/join-stage3.sh` that essentially does the same thing after fixing the PATH to workround a bug in NTFS3 symlinks that makes busybox otherwise unusable.
+You can still get cosmopolitan bash with either `chroot /switchroot/ /.ape-1.9 /usr/bin/bash` or by running `/initrd/join-stage3.sh` that essentially does the same thing after fixing the PATH to workround a bug in NTFS3 symlinks that makes busybox otherwise unusable, and does some plumbing job to connect the stdin to the current console
 
 # It's like the pictures, but what is cosmopolinux?
 
 Cosmopolinux is a 3-in-1:
 
- - a distribution of a few curated and configured [Cosmopolitan polyglot binaries](https://github.com/jart/cosmopolitan) from [cosmo.zip and a few other places](https://cosmo.zip/) (TODO: include more, and collect them automatically from a Makefile)
- - scripts to be able to boot this distribution (baremetal or virtualized within qemu) thanks to the custom staged init scripts (TODO: make sure stage1 and stage2 work like the old stage1and2 used for baremetal; add scripts to create UKIs for baremetal use)
+ - a distribution of a few curated and configured [Cosmopolitan polyglot binaries](https://github.com/jart/cosmopolitan) from [cosmo.zip and a few other places](https://cosmo.zip/) (TODO: include more, and collect them automatically from a script or better: a Makefile)
+ - scripts to boot this distribution (baremetal or virtualized) thanks to the custom staged init scripts (TODO: make sure stage1 and stage2 work like the old stage1and2 used for baremetal; add scripts to create UKIs for baremetal use; support hyperV too)
  - a slightly optimized static linux kernel, with backported patches and a .config file so you can tweak it
 
 Cosmopolitan binaries are polyglot static binaries made to run on every OS without using virtualization or containers thanks to libc work.
@@ -66,7 +66,7 @@ You want to run cosmpolitan binaries directly when you can, but sometimes you wa
  - Cosmopolinux is centered about cosmopolitan binaries, but comes with a Linux kernel as an option to run these binaries, and an optimized qemu script (stage 0), so it will not just "work everywhere" but to also try to provide a "great" experience *anywhere* qemu and cosmopolitan binaries can work!
  - Cosmopolinux is a much a simpler alternative to anything, even docker, with a codebase as small as possible (a few scripts) to be easily understandable, fixable, auditable and therefore more reliable: complexity is where bugs hide! If all you have is 3 stages of init scripts + terminals to monitor a running system, bugs can't hide for very long!
 
-You get to decide which stage to start from is best suited for your usecase, because Cosmopolinux is made to be flexible: whether you A) use qemu for a consistent experience, B) run the kernel and initrd stages baremetal for maximized performance, or C) just extract and run the binaries, Cosmopolinux should aways work. (TODO: try to integrate superconfigure to make good on that final promise)
+You get to decide which stage to start from is best suited for your usecase, because Cosmopolinux is made to be flexible: whether you A) use an emulator for a consistent experience, B) run the kernel and initrd stages baremetal for maximized performance, C) run the staging scripts directly (TODO: add support for namespaces) or D) just extract and run the binaries, Cosmopolinux should aways work. (TODO: try to integrate superconfigure to make good on that final promise)
 
 # What are the 3 stages?
 
@@ -87,9 +87,9 @@ There's also a "stage 9", a "final stage" that can be entered :
 
 Stage 9 will unmount your NTFS partition, so it's not marked dirty (and needs a fsck) for the next boot.
 
-The very first version did only remount the partition as read-only, but this is not suitable for other filesystems so stage 9 was improved to be run as PID 1 whenever possible. 
+The very first version did only remount the partition as read-only, but this is not suitable for other filesystems so stage 9 was improved to be run as PID 1 whenever possible: this happens even if stage 9 is called by the join script running in a console. To do that, 2 kills are sent very quickly to stage 3, which then starts stage 9.
 
-This happens even if stage 9 is called by the join script running in a console: this is done by sending 2 kills very quickly to stage 3, which the starts stage 9. If stage 9 is called directly from a console, the same thing should happen thanks to a small delay allowing PID 1 to win the race to stage 9.
+If stage 9 is called directly from a console, the same thing should happen thanks to a small delay allowing PID 1 to "win the race" to stage 9.
 
 # Why so many stages?
 
@@ -101,7 +101,7 @@ Stage 3 can then proceed as usual, but I believe it will be easier to design dif
 
 You may not always need 3 stages, but they offer nice boundaries, so everything is being moved to these 3 stages to better divide responsabilities:
 
- - the old stage1and2.sh should be replaced by parts inside stage1 and stage2 when work baremetal with 1 partition and no initrd
+ - the old stage1and2.sh should be replaced by parts inside stage1 and stage2 when working baremetal with 1 partition and no initrd (TODO: consider keeping the initrd even when baremetal due to NTFS3 symlink bugs)
  - there should be a stage 2 script to allow starting from within a local folder on linux, then access essential filesystems (/dev /proc /sys/) with bind mounts, chroot, or with a better isolation thanks to namespaces (TODO: write a PoC script to show how docker can be replaced)
  - the configuration file used by bash in stage 3 (.bashrc etc) should be move to the zip part of the APE
 
@@ -173,7 +173,7 @@ Going back to this old version, the 0.8 to 0.9 seconds it took to boot the linux
 [    0.800920] e1000 0000:00:04.0 eth1: Intel(R) PRO/1000 Network Connection
 ```
 
-You can see nothing happens between 0.42 and 0.8 seconds. I call that "slow" at this scale, where the reference point is the time it takes for the kernel to boot in qemu: it's 800 ms, where 400 ms are always wasted, even when you will not use the networking options.
+You can see nothing happens between 0.412 and 0.8 seconds. I call that "slow" at this scale, where the reference point is the time it takes for the kernel to boot in qemu: it's 800 ms, where 400 ms are always wasted, even when you will not use the networking options.
 
 Of course, these 400 ms are dwarfed by the time it takes for qemu network to be reliable: about another 3000 ms, so another order of magnitude! However, you can decide to run tasks *after* 4s if you need networking, or *immediately* if you don't care about networking but care about speed.
 
@@ -216,9 +216,9 @@ NTFS+Bitlocker would be nice, however BRTFS (winbtrfs!) or ZFS support (openzfs!
 
 NTFS was chosen because the #1 goal is to have the distribution "live naturally" within one folder inside the main C:\ drive on a PC running Windows.
 
-The modern in-kernel NTFS3 support (not to be confused with ntfs-3g) allows POSIX attributes like permissions, users, groups so it's all transparent to the Linux kernel if using it in stage 1.
+The modern in-kernel NTFS3 support (not to be confused with ntfs-3g) allows POSIX attributes like permissions, users, groups so it's all transparent to the Linux kernel if using it in stage 1. Also, NTFS specifications seem stable and frozen so it's unlikely to change.
 
-There's support for HFS, but it isn't as good yet - also, NTFS specifications seem more stable and frozen.
+There's kernel support for HFS, but it isn't as good yet.
 
 You are not *forced* to use NTFS: if you prefer say XFS over NTFS, just put the cosmopolitan binaries in a matching diskimage.
 
@@ -309,18 +309,21 @@ Systemd would be another option with easy to understand text files, while C woul
 
 Overall, even if it's far from "ideal", I believe using shell scripting for the earliest stages offers the best tradeoffs between tweakability, speed, maintenance, flexibility and operating system independance.
 
-YetI hope that:
+Yet I hope that:
 
- - stage 1 can be fully in C (as it's early enough to be set in stone to match the requirements like 1 folder)
+ - stage 1 can be fully in C using cosmopolitan binaries (as it's early enough to be set in stone to match the requirements like 1 folder)
  - stage 2 can use systemd if someday it's adopted on Macs and Windows
+ - stage 3 (and any future stage) can remain mostly in script, to encourage hacking
 
 # Why use the initrd?
 
 Using an initrd facilitates development and debugging with qemu, and will also make it possible to support Bitlocker encrypted NTFS partition to run Cosmopolinux from.
 
-Initrd is not a requirement: if the NTFS partition content isn't encrypted, it should be possible to do without initrd, by booting straight into the ntfs3 rootfs with the appropriate script to initialize the environment.
+Initrd is not a requirement yet (TODO: but could be, due to ntfs3 symlink issues!): if the NTFS partition content isn't encrypted, it should be possible to do without initrd, by booting straight into the ntfs3 rootfs with the appropriate script to initialize the environment.
 
-To show how to do without any initrd, the qemu scripts shows an example using an older mixed stage 1 + stage 2 script called from a file inside the NTFS partition (stage1and2.sh), while the kernel is loaded with "noinitrd" to discard any initrd that may have been left. Some tweaks of the separate stage 1 and stage 2 scripts should allow removing this separate script.
+It's not clear if allowing baremetal boot without an initrd makes more sense that requiring it.
+
+However, to show how to do without any initrd, the qemu scripts shows an example using an older mixed stage 1 + stage 2 script called from a file inside the NTFS partition (stage1and2.sh), while the kernel is loaded with "noinitrd" to discard any initrd that may have been left. Some tweaks of the separate stage 1 and stage 2 scripts should allow removing this separate script.
 
 It's also possible to pass a rootfs flag to the normal stage 1 and stage 2 - it's less tested, but it should work too.
 
@@ -332,7 +335,9 @@ Yes, the process involves:
  - eventually adding the files you want to ./initrd (ex: fonts if using a 4k display baremetal, keymaps if using a non US keyboard)
  - running initrd-pack.sh to assemble a new initrd.cpio.gz
 
-You can then test the new initrd with stage0-qemu.sh: it contains all the options, and has "QEMU_SH" to write the short resulting qemu script to ./qemu.sh
+You can then test the new initrd just by running ./stage0-qemu.sh: it contains all the options, and has "QEMU_SH" to write the short resulting qemu script to ./qemu.sh for debug.
+
+To automate the assembly of the new initrd and a filesystem check, you can also use `gev.sh`
 
 # Can I change the kernel?
 
@@ -358,29 +363,93 @@ If you feel like keeping the 3 stages, then it's just a problem of creating a wa
 
 You can also just be running the bash cosmopolitan binary as stage 3: this is skipping the stages that have already been done when your computer booted.
 
+# Can I compile code and make actually portable executables with cosmopolinux?
+
+Please try it: compiling is a core feature of cosmopolinux, and the reason you have /opt/git and /opt/cosmcc
+
+The code can saved in /code (TODO: consider [including superconfigure](https://github.com/ahgamut/superconfigure/) for bootstrap)) : you have /code/fzy as an example to get you started in cosmopolitan C.
+
+fzy will be our 'hello world', since it's a simple, but it will be better than helloworld since fuzzy-finding (typeahead complete) is very useful!
+
+You can compile fzy with compile.sh through `cd /code/fzy && compile.sh`: if you look inside compile.sh, you'll see it's a 4 step process:
+
+ - prepare the variables:
+
+    #!/bin/sh
+    export COSMOCC=/opt/cosmocc
+    export COSMOS=/opt/cosmos
+    export PATH=$PATH:$COSMOCC/bin:$COSMOCC/libexec/gcc/
+
+ - compile a x86-64 version
+
+    export CC=x86_64-unknown-cosmo-cc
+    export CXX=x86_64-unknown-cosmo-c++
+    # usually needs:
+    # ./configure --prefix=$COSMOS/x86_64
+    make -j2
+    cp fzy fzy.x86-64.elf
+
+ - compile a aarch64 version
+
+    export CC=aarch64-unknown-cosmo-cc
+    export CXX=aarch64-unknown-cosmo-c++
+    make -j2
+    cp fzy fzy.aarch64.elf
+ 
+ - assemble the 2 versions together with the multi-platform assembler
+
+    apelink -o fzy.com -l $COSMOCC/bin/ape-x86_64.elf -l $COSMOCC/bin/ape-aarch64.elf -M $COSMOCC/bin/ape-m1.c fzy.aarch64.elf fzy.x86-64.elf
+    cp fzy.com fzy
+
+ - usually followed by an installation, not done in compile.sh to avoid messing with the working binary
+
+    cp fzy /usr/bin
+
+That's how it generally works, but there can be variations, for example if there's a ./configure:
+
+ - you can use cosmocc instead of the 2 compilation steps; you often need to define the paths to the includes and the libraries to avoid complains about missing dependencies:
+
+    #!/bin/sh
+    export COSMOS=/opt/cosmos
+    export PATH=$PATH:$COSMOCC/bin:$COSMOCC/libexec/gcc/
+    export CC="cosmocc -I$COSMOS/include -L$COSMOS/lib"
+    export CXX="cosmoc++ -I$COSMOS/include -L$COSMOS/lib"
+
+ - some dependencies are managed by pkgconfig, so you should say where pkgconfig can find its .pc files:
+
+    export PKG_CONFIG="pkg-config --with-path=$COSMOS/lib/pkgconfig"
+
+ - which cosmopolitan binaries should be used for maximal compatibility:
+
+    export INSTALL="cosmoinstall"
+    export AR="cosmoar"
+
+More examples will be written, with better documentation, but this should let you get started!
+
 # What's next on the roadmap?
 
 Let's first see what's ready.
 
 Right now, there's:
 
- - a small (1M) initrd containing busybox, the stage 1 and stage 2 scripts, and a script to join stage 3
+ - a small (1M) initrd containing busybox, scripts for the stages 1, 2, 3, 9, and scripts to join stage 3 and 9
  - the ntfs3 image that can be written to a partition, also containing a combined stage 1+stage 2 for direct use (TODO: integrate the features in the new stage 1 and stage 2 scripts)
  - a qemu script to test the ntfs3 image with a variety of preset options
  - a kernel/ folder with my choices of kernel options
 
 Coming next, in no specific order:
 
- - making UKIs with objcopy to allow booting by UEFI (with rufus to chainload it, both for secureboot issues and due to EFI small size + lack of NTFS support by most UEFIs) + a script to add this UKI to the UEFI (using efibootmgr)
  - using diskimage/ and dots/ to generate the ntfs3 image
+ - making UKIs with objcopy to allow booting by UEFI (with rufus to chainload it, both for secureboot issues and due to EFI small size + lack of NTFS support by most UEFIs) + a script to add this UKI to the UEFI (using efibootmgr)
+ - an option to package the binaries as an .iso image with [an isohybrid bootloader](https://wiki.syslinux.org/wiki/index.php?title=Isohybrid)
  - putting the collection of binaries into both a zip archive (for redistribution) and /diskimage
+ - being able to boot to the UKI without leaving Windows thanks to an equivalent of efibootmgr (TODO: use [GetSetVariable](https://github.com/ProSlatisa/GetSetVariable) with some PowerShell glue logic to get BootOrder and BootX from the 8BE4DF61-93CA-11D2-AA0D-00E098032B8C GUID) 
  - automating the collection of cosmopolitan binaries from repositories with a Makefile
  - automating the collection of Paragon NTFS tools from public URLs with the Makefile
- - in the stage2 script, some kind of chroot support to add the options to do without qemu
- - in the stage2, replacing chroot by namespaces (like Docker)
- - an option to package the binaries as an .iso image with [an isohybrid bootloader](https://wiki.syslinux.org/wiki/index.php?title=Isohybrid)
+ - in the stage2 script, some kind of chroot support to add the option to do without qemu
+ - in the stage2, also offering replacing chroot by namespaces (like Docker)
  - other stage2 script (try to start from Windows with a polyglot script, try to start from a Windows PE)
- - turtles all the way down: nested virtualization without too much performance loss having cosmopolinux baremetal as the dom0 running other cosmopolinux through qmu
+ - turtles all the way down: nested virtualization without too much performance loss having cosmopolinux baremetal as the dom0 running other cosmopolinux through qmu (let's try to replace, both ESXi and Docker, doing like Proxmox or a simple guix)
 
 # That sounds very complicated and too ambitious
 
