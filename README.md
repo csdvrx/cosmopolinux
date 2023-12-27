@@ -222,6 +222,14 @@ There's kernel support for HFS, but it isn't as good yet.
 
 You are not *forced* to use NTFS: if you prefer say XFS over NTFS, just put the cosmopolitan binaries in a matching diskimage.
 
+# Can I recreate the NTFS3 image?
+
+Yes, run `sh ./ntfs-create.sh -f` to remove the current cosmopolinux.ntfs3 and create a new one based on ./distribution: it will create a 2G file filled with zeroes, create a NTFS filesystem, and rsync the content from ./distribution
+
+# Can I recreate ./distribution?
+
+Yes, run `sh ./distribution-create.sh` to recreate a distribution/ with [the latest binaries from the cosmos zipverse](https://cosmos.zip): it will add a new extra files and APE binaries from skel/, and the only non APEified binary left: busybox
+
 # Can I remove bash? What else can I remove?
 
 Yes, bash is what stage 2 starts in stage 3 if there's no /init, but you can pack a different binary than bash, and name it /init or pass the init=/yourbinary to the commandline. A good choice would be redbean if you can tolerate the 3 seconds it takes for the network to be ready.
