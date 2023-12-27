@@ -1,4 +1,4 @@
-" .vimrc version 20231224
+" .vimrc version 20231226 - Boxing day 2023 version!
 
 " #### WHEN STARTING/STOPPING
 
@@ -252,6 +252,10 @@ inoremap <ESC>[27;5;47~ <C-K>
 
 " ## OTHERS ON A CASE-BY-CASE
 
+" Left available in C0: Ctrl-\, Ctrl-;
+" Ctrl-_ (maps to Ctrl-/), Ctrl-` (maps to Ctrl-@)
+" Ctrl-` mok is [27;5;96~
+nnoremap <ESC>[27;5;96~ <Cmd>echomsg 'C-@ was hit'<CR>
 " Ctrl-; mok is [27;5;59~
 nnoremap <ESC>[27;5;59~ <Cmd>echomsg 'C-; was hit'<CR>
 " Ctrl-' mok is [27;5;39~ but doesn't work
@@ -261,8 +265,6 @@ nnoremap <ESC>[27;5;92~ <Cmd>echomsg 'C-\ was hit'<CR>
 " Ctrl-/ mok is [27;5;47~
 "nnoremap <ESC>[27;5;47~ <Cmd>echomsg 'C-/ was hit'<CR>
 " Ctrl-/ was mapped to compose
-
-" Left available in C0: Ctrl-\, Ctrl-_ (maps to Ctrl-/), Ctrl-@
 
 " ## SAVE CTRL- ORIGINAL FUNCTIONS BEFORE DEDUPED MAPPINGS
 
@@ -640,7 +642,8 @@ set noautoindent
 "Automatically indents new lines based on old lines
 set smartindent
 "Like smartindent, but stricter and more customisable
-set cindent
+"set cindent
+" but breaks on urls
 
 " Tab to indent and Shit-Tab to unindent
 nmap <Tab> <C-g>>><CR>k
@@ -825,6 +828,7 @@ endfunction
 
 " ## READ THE GIT DATA MANUALLY
 " Function to read git data manually directly (not recursive like gitbranch)
+" TODO: consider making it recursive?
 function! GetGitBranch()
  let fpath=expand("%:p:h")
  if filereadable(fpath . '/.git/HEAD')
@@ -993,16 +997,16 @@ else
 endif " if has('guirunning
 
 " ## OVERRIDE THE DEFAULT MODE WITH OTHER ENVIRONMENT VARIABLES
-if match ($WEZTERM_CONFIG_FILE, "/home/charlotte/.config/wezterm/wezterm.lua")==0
- set background=dark
- let g:solarized_style="dark"
- let g:solarized_termcolors=256
- " when showing EOL with :set list
- let g:solarized_visibility="low"
- let g:solarized_hitrail=1
- set t_ti=
- set t_te=
-endif
+"if match ($WEZTERM_CONFIG_FILE, "/home/$USER/.config/wezterm/wezterm.lua")==0
+" set background=dark
+" let g:solarized_style="dark"
+" let g:solarized_termcolors=256
+" " when showing EOL with :set list
+" let g:solarized_visibility="low"
+" let g:solarized_hitrail=1
+" set t_ti=
+" set t_te=
+"endif
 " Can override the default color by WT profile UUID
 if match ($WT_PROFILE_ID, "{b9261ded-f302-4538-889e-665aef724946}")==0
  set background=light
@@ -1025,7 +1029,7 @@ if match ($WT_PROFILE_ID, "{2c4de342-38b7-51cf-b940-2309a097f518}")==0
 "set t_te=
 endif
 
-" ### COLOR SETTING
+" ### COLOR SETTINGS AND FUNCTIONS
 
 if has("terminfo")
 " set t_Co=8
@@ -1059,7 +1063,7 @@ function! CSVHighlight(colnr)
 endfunction
 command! -nargs=1 CsvHighlight :call CSVHighlight(<args>)
 
-" ## FUNCTION TO CREATE A 'RAINBOW' INDENT (COLORED IN LIGHT MODE)
+" ## FUNCTION TO CREATE A 'RAINBOW' INDENT (COLORED ONLY IN LIGHT MODE)
 							
 " use 256-colors.sh to pick, here we have shades of black + the usual rainbow
 if !exists("g:rainbow_colors_black")
@@ -1131,7 +1135,6 @@ function! Rainbow_Toggle() abort
 	endif
 endfunction
 
-
 " ## FUNCTIONS TO ALTER THE COLOR SCHEME
 
 " on OLED screens, replace the ugly darkgrey with pitchblack
@@ -1157,8 +1160,10 @@ function! OLED_Black()
  endif " if match (&background
 endfunction
 
+" Start with the rainbow and OLED black
 if has("autocmd")
  autocmd ColorScheme * call OLED_Black()
+ autocmd ColorScheme * call Rainbow_Enable()
 endif
 
 " ## FUNCTIONS TO HILIGHTS CHARACTERS
