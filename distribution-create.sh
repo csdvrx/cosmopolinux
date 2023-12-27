@@ -40,7 +40,7 @@ mkdir ./${BASEDIR}
 ## 1. Create the filesystem tree
 
 # create the directories
-for d in abc busybox busybox/scripts dev dev/pts etc initrd opt proc run sys tmp usr ; do
+for d in abc busybox busybox/scripts dev dev/pts etc initrd lib opt proc run sys tmp usr ; do
  mkdir ${BASEDIR}/$d
 done
 
@@ -52,7 +52,7 @@ cp -adr skel/dots/. ${BASEDIR}
 
 ## 2.2. Fill in abc/ with enough to prepare A Baremetal Cosmopolinux
 
-cp -adr baremetal/*sh baremetal/cmdline* baremetal/README* baremetal/os-release baremetal/linuxx64.efi.stub ${BASEDIR}/abc
+cp -adr baremetal/*sh baremetal/cmdline* baremetal/README* baremetal/os-release baremetal/linuxx64.efi.stub initrd-pack.sh initrd.cpio.gz kernel.bzImage ${BASEDIR}/abc
 
 ## 2.3. Populate busybox/ (until it can be APE'ified)
 [ -f ${ASSETSDIR}/busybox ] \
@@ -90,7 +90,11 @@ echo cosmopolinux > ${BASEDIR}/etc/hostname
 cat skel/etc/udhcpd.conf > ${BASEDIR}/etc/udhcpd.conf
 cat skel/etc/resolv.conf > ${BASEDIR}/etc/resolv.conf
 
-## 2.7. Fill in usr/bin/
+## 2.7. Fill in lib with lib/modules from modules.tgz
+
+tar zxvf kernel/modules.tgz -C ${BASEDIR}
+
+## 2.8. Fill in usr/bin/
 
 # Only download the assets if needed (ex: make mrproper)
 [ -f ${ASSETSDIR}/cosmos.zip ] \

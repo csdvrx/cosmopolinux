@@ -1,0 +1,89 @@
+# based on jp106.map (Japanese 106 keyboard keymap)
+# by Hideya Hane <wing@aries.bekkoame.or.jp>
+## But simplified and aimed for console use
+#keymaps 0-1,4-5,8-9,12
+#alt_is_meta
+#include "qwerty-layout"
+#include "linux-with-two-alt-keys"
+#strings as usual
+#compose as usual for "iso-8859-1"
+
+## control and esc
+# caps: extra control: seem to still get stuck
+		keycode 58 = Control
+# control too at the extra levels to avoid shift+58=Shift_Lock
+shift		keycode 58 = Control
+control		keycode 58 = Control
+alt		keycode 58 = Control
+altgr		keycode 58 = Control
+
+# esc: kept for muscle memory / habits
+#		keycode   1 = Escape
+		keycode   1 = Shift_Lock
+
+#string Home = "\033[1~"
+#string End = "\033[4~"
+## 5 extra keys
+# Muenkan: End aka Select
+#		keycode  92 = Decr_Console
+		keycode  92 = Select
+# Henkan: Home aka Find
+#		keycode  94 = Incr_Console
+		keycode  94 = Find
+# Hiragana: to tab between console
+		keycode  93 = Last_Console
+# Ro: start a new console
+# TODO: check Spawn_Console
+		keycode  89 = Spawn_Console
+# so instead backwards-word-delete aka ^W and forward-word-delete aka ^[d
+#		keycode 124 = Control_w Meta_d
+# or just Backspace (called Delete in linux-console jargon, while Delete is Remove)
+		keycode 124 = Delete Remove
+
+## kbrequest.service triggered when sending KeyboardSignal
+# Yen, problem: too easy to reach to map to kbrequest.service
+#		keycode 124 = KeyboardSignal
+# Fn, same problem
+#		keycod  143 = KeyboardSignal
+# so instead just scroll backward the console
+#		keycode 143 = Scroll_Backward
+# better choice: Insert 110 protected by Fn on Thinkpads
+		keycode 110 = KeyboardSignal
+
+# directly go to a console with the Fn key
+		keycode  59 = Console_1  F1
+	alt     keycode  59 = Console_1
+control	alt     keycode  59 = Console_1
+                keycode  60 = Console_2 F2
+	alt     keycode  60 = Console_2
+control	alt     keycode  60 = Console_2
+		keycode  61 = Console_3  F3
+	alt     keycode  61 = Console_3
+control	alt     keycode  61 = Console_3
+		keycode  62 = Console_4  F4
+	alt     keycode  62 = Console_4
+control	alt     keycode  62 = Console_4
+		keycode  63 = Console_5  F5
+	alt     keycode  63 = Console_5
+control	alt     keycode  63 = Console_5
+		keycode  64 = Console_6  F6
+	alt     keycode  64 = Console_6
+control	alt     keycode  64 = Console_6
+		keycode  65 = Console_7  F7
+	alt     keycode  65 = Console_7
+control	alt     keycode  65 = Console_7
+		keycode  66 = Console_8  F8
+	alt     keycode  66 = Console_8
+control	alt     keycode  66 = Console_8
+		keycode  67 = Console_9  F9
+	alt     keycode  67 = Console_9
+control	alt     keycode  67 = Console_9
+		keycode  68 = Console_10 F10
+	alt     keycode  68 = Console_10
+control	alt     keycode  68 = Console_10
+		keycode  87 = Console_11 F11
+	alt     keycode  87 = Console_11
+control	alt     keycode  87 = Console_11
+		keycode  88 = Console_12 F12
+	alt     keycode  88 = Console_12
+control	alt     keycode  88 = Console_12
