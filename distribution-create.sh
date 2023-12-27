@@ -71,7 +71,10 @@ for t in $BB_TOOLS ; do
  chmod 755 ${BASEDIR}/busybox/scripts/$t
 done
 
-## 2.4. Populate a minimal dev/
+## 2.4. Populate a minimal /compile to show how to make APEs
+cp -adr skel/compile ${BASEDIR}
+
+## 2.5. Populate a minimal dev/
 mknod -m 622 ${BASEDIR}/dev/console c 5 1
 mknod -m 666 ${BASEDIR}/dev/null c 1 3
 mknod -m 666 ${BASEDIR}/dev/zero c 1 5
@@ -82,12 +85,12 @@ mknod -m 444 ${BASEDIR}/dev/urandom c 1 9
 mknod -m 622 ${BASEDIR}/dev/kmsg c 1 11
 mknod -m 622 ${BASEDIR}/dev/ttyS0 c 4 64
 
-## 2.5. Fill in etc/ from skel
+## 2.6. Fill in etc/ from skel
 echo cosmopolinux > ${BASEDIR}/etc/hostname
 cat skel/etc/udhcpd.conf > ${BASEDIR}/etc/udhcpd.conf
 cat skel/etc/resolv.conf > ${BASEDIR}/etc/resolv.conf
 
-## 2.6. Fill in usr/bin/
+## 2.7. Fill in usr/bin/
 
 # Only download the assets if needed (ex: make mrproper)
 [ -f ${ASSETSDIR}/cosmos.zip ] \
@@ -99,12 +102,12 @@ cat skel/etc/resolv.conf > ${BASEDIR}/etc/resolv.conf
 
 ${ASSETSDIR}/unzip ${ASSETSDIR}/cosmos.zip -d ${BASEDIR}/usr
 
-# FIXME: may need to extras like box, perl and fzy until added to superconfigure
+# FIXME: needs extra binaries like box, perl and fzy until added to superconfigure
 for e in fzy perl sbase-box; do
  cp skel/$e.com ${BASEDIR}/usr/bin
 done
 
-# FIXME: compared to https://cosmo.zip/pub/cosmos/bin/
+# FIXME: compared to https://cosmo.zip/pub/cosmos/bin/ we're currently
 # missing the following in https://cosmo.zip/pub/cosmos/zip/cosmos.zip
 for m in ape-aarch64.elf ape-arm64.elf ape-x86_64.elf ape-x86_64.macho assimilate-aarch64.elf assimilate-x86_64.elf assimilate-x86_64.macho clang-format cpuid curl dash hello links llama mktemper rsync wget ; do
  [ -f ${BASEDIR}/usr/bin/$m ] \
@@ -114,7 +117,7 @@ done
 # make usr/bin/* executable
 chmod +x ${BASEDIR}/usr/bin/*
 
-## 2.7. Fill in opt/ with cosmocc and git
+## 2.8. Fill in opt/ with cosmocc and git
 
 [ -f ${ASSETSDIR}/cosmocc.zip ] \
  || ${WGET} https://cosmo.zip/pub/cosmos/zip/cosmocc.zip -O ${ASSETSDIR}/cosmocc.zip
